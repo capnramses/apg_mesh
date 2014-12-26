@@ -73,9 +73,14 @@ All of these are also optional. This is the main feature of the format.
 
 ##Dependencies##
 
-I use the AssImp library (http://assimp.sourceforge.net/) in the converter tool
-as a general-purpose importer - it imports a huge range of mesh formats - but
-no library is required to read the output .apg files.
+Converter:
+
+* AssImp http://assimp.sourceforge.net/
+
+OpenGL-based Viewer:
+
+* GLFW3 http://www.glfw.org/docs/latest/
+* GLEW http://glew.sourceforge.net/
 
 ##Future Ideas##
 
