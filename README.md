@@ -80,7 +80,7 @@ centimetre or millimetre to reduce file size to ~5 bytes per value.
 
 Some tags contain redundant information which could be tidied. Animation names
 are not respected because I've had difficulty exporting these myself from
-Blender, but should be trivial to 
+Blender.
 
 ###Blender Export Script###
 
