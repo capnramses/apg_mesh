@@ -47,18 +47,44 @@ values per-line.
 Each block is preceded by a tag line that gives the number of components per
 line i.e. 3 for XYZ points. This makes it easy to dynamically allocate memory
 during a single pass, whilst parsing the file (the number of vertices in the
-mesh is given at the top of the file). Example of vertex points "vp" block:
+mesh is given at the top of the file).
 
+Example of vertex points "vp" block:
+
+    @vert_count 1836
     @vp comps 3
-    0.298388 2.503322 -0.224913
-    -0.298635 2.503061 -0.224913
+    -0.30 0.01 0.45
+    -0.24 0.01 0.44
     ...
 
-* Points are assumed to be in meters. I then round to the centimeter to reduce
+Points are assumed to be in meters. I then round to the centimeter to reduce
 file size to ~5 bytes per value.
-* Normals and tangents are rounded to 3 s.f. as they are normalised later
-anyway.
-* Texture coordinates are rounded to 3 s.f.
+
+Example of normals in "vn" block:
+
+    @vn comps 3
+    0 1 -0
+    0 1 -0
+    ...
+Normals and tangents are rounded to 3 s.f. as they are normalised later anyway.
+
+Example of texture coordinates in "vt" block:
+
+    @vt comps 2
+    0.752 0.912
+    0.5 0.994
+    ...
+
+Texture coordinates are rounded to 3 s.f.
+
+Example of tangents in "vtan" block:
+
+    @vtan comps 4
+    -0.875 0 0.484 -1
+    -0.875 0 0.484 -1
+    ...
+
+Tangents can contain a fourth coordinate convention to be used if desired.
 
 ##Per-Mesh Data##
 
