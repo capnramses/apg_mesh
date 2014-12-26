@@ -1,14 +1,18 @@
-/* mesh converter from various formats to custom format
-uses the Assimp asset importer library http://assimp.sourceforge.net/
-Dr Anton Gerdelan <anton at antongerdelan.net>
-First version 3 Jan 2014 */
+//
+// .apg Viewer in OpenGL 2.1
+// Anton Gerdelan
+// antongerdelan.net
+// First version 3 Jan 2014
+// Revised: 26 Dec 2014
+// uses the Assimp asset importer library http://assimp.sourceforge.net/
+//
 
 #include "mesh_loader.h"
 #include <stdio.h>
 #include <assert.h>
 #include <stdbool.h>
 #include <string.h>
-#define VERSION "7NOV2014"
+#define VERSION "26DEC2014"
 
 /* TODO
 root transform for anim or whole mesh? think anim
@@ -192,7 +196,9 @@ bool write_output (const char* file_name) {
 			if (i % vp_comps != 0) {
 				fprintf (f, " ");
 			}
-			fprintf (f, "%f", mesh.vps[i]);
+			//
+			// assuming units in meters - prints to the centimeter
+			fprintf (f, "%.2f", mesh.vps[i]);
 			if (i % vp_comps == vp_comps - 1) {
 				fprintf (f, "\n");
 			}
@@ -204,7 +210,9 @@ bool write_output (const char* file_name) {
 			if (i % vn_comps != 0) {
 				fprintf (f, " ");
 			}
-			fprintf (f, "%f", mesh.vns[i]);
+			//
+			// 3 s.f. - normalised later anyway
+			fprintf (f, "%.3g", mesh.vns[i]);
 			if (i % vn_comps == vn_comps - 1) {
 				fprintf (f, "\n");
 			}
@@ -216,7 +224,9 @@ bool write_output (const char* file_name) {
 			if (i % vt_comps != 0) {
 				fprintf (f, " ");
 			}
-			fprintf (f, "%f", mesh.vts[i]);
+			//
+			// 3 s.f. - normalised later anyway
+			fprintf (f, "%.3g", mesh.vts[i]);
 			if (i % vt_comps == vt_comps - 1) {
 				fprintf (f, "\n");
 			}
@@ -225,10 +235,21 @@ bool write_output (const char* file_name) {
 	if (has_vtan) {
 		fprintf (f, "@vtan comps %i\n", vtan_comps);
 		for (i = 0; i < vertex_count * vtan_comps; i ++) {
+			float ttan;
+			
+			//
+			// make sure is not going to print "nan" due to assimp error
+			ttan = mesh.vtangents[i];
+			if (isnan(ttan)) {
+				ttan = 0.0f;
+			}
+			
 			if (i % vtan_comps != 0) {
 				fprintf (f, " ");
 			}
-			fprintf (f, "%f", mesh.vtangents[i]);
+			//
+			// 3 s.f. - normalised later anyway
+			fprintf (f, "%.3g", ttan);
 			if (i % vtan_comps == vtan_comps - 1) {
 				fprintf (f, "\n");
 			}

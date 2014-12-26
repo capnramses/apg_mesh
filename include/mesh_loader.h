@@ -1,3 +1,12 @@
+//
+// .apg Viewer in OpenGL 2.1
+// Anton Gerdelan
+// antongerdelan.net
+// First version 3 Jan 2014
+// Revised: 26 Dec 2014
+// uses the Assimp asset importer library http://assimp.sourceforge.net/
+//
+
 #ifndef _MESH_LOADER_H_
 #define _MESH_LOADER_H_
 
@@ -46,7 +55,7 @@ for (int i = 0; i < g_loaded_meshes[mesh_index].bone_count; i++) {
 * draw g_loaded_meshes[mesh_index].point_count
 */
 
-#include "maths_funcs.h"
+#include "maths_funcs.hpp"
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>

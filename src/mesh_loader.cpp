@@ -1,3 +1,12 @@
+//
+// .apg Viewer in OpenGL 2.1
+// Anton Gerdelan
+// antongerdelan.net
+// First version 3 Jan 2014
+// Revised: 26 Dec 2014
+// uses the Assimp asset importer library http://assimp.sourceforge.net/
+//
+
 #include "mesh_loader.h"
 //#include "gl_utils.h"
 //#include <GL/glew.h> // include GLEW and new version of GL on Windows

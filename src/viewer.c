@@ -1,4 +1,12 @@
-#include "maths_funcs.h"
+//
+// .apg Viewer in OpenGL 2.1
+// Anton Gerdelan
+// antongerdelan.net
+// First version 3 Jan 2014
+// Revised: 26 Dec 2014
+// uses the Assimp asset importer library http://assimp.sourceforge.net/
+//
+#include "maths_funcs.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
@@ -6,25 +14,26 @@
 #include <string.h>
 #include <stdlib.h>
 
-int width = 640;
-int height = 480;
+int width = 800;
+int height = 800;
 GLFWwindow* window;
+bool cam_dirty = true;
 
-GLuint shader_programme = 0;
+GLuint shader_programme;
 GLint params = -1;
-GLint P_loc = 0;
-GLint V_loc = 0;
+GLint P_loc = -1;
+GLint V_loc = -1;
 
-GLuint no_skin_shader_programme = 0;
-GLint no_skin_P_loc = 0;
-GLint no_skin_V_loc = 0;
+GLuint no_skin_shader_programme;
+GLint no_skin_P_loc = -1;
+GLint no_skin_V_loc = -1;
 
 #define MAX_BONES 32
-GLint B_locs[MAX_BONES] = { 0 };
-GLuint psp = 0;
-GLint pP_loc = 0;
-GLint pV_loc = 0;
-GLint pM_loc = 0;
+GLint B_locs[MAX_BONES];
+GLuint psp;
+GLint pP_loc = -1;
+GLint pV_loc = -1;
+GLint pM_loc = -1;
 
 #define MAX_ANIM_NAME_LEN 64
 struct TraAnimKey {
@@ -72,12 +81,12 @@ void print_all_keys () {
 			printf (" a%ichannel %i:\n", i, j);
 			for (int k = 0; k < animations[i].channels[j].tra_keys_count; k++) {
 				printf ("  a%ic%i tra_key %i\n", i, j, k);
-				printf ("t %lf\n", animations[i].channels[j].tra_keys[k].time);
+				printf ("t %f\n", animations[i].channels[j].tra_keys[k].time);
 				print (animations[i].channels[j].tra_keys[k].tra);
 			}
 			for (int k = 0; k < animations[i].channels[j].rot_keys_count; k++) {
 				printf ("  a%ic%i rot_key %i\n", i, j, k);
-				printf ("t %lf\n", animations[i].channels[j].rot_keys[k].time);
+				printf ("t %f\n", animations[i].channels[j].rot_keys[k].time);
 				print (animations[i].channels[j].rot_keys[k].rot);
 			}
 		}
@@ -97,20 +106,27 @@ void _recurse_anim_tree (
 	int my_anim_node,
 	mat4 parent_mat
 ) {
+	mat4 trans_mat, rot_mat, node_mat, global_trans_mat;
 
 	if (!animations) {
 		return;
 	}
 
-	mat4 trans_mat = identity_mat4 ();
-	mat4 rot_mat = identity_mat4 ();
+	trans_mat = identity_mat4 ();
+	rot_mat = identity_mat4 ();
 	// position
 	if (animations->channels[my_anim_node].tra_keys_count > 1) {
-		// work out previous frame and next frame numbers
 		int previous_frame_index = 0;
 		int next_frame_index = 1;
-		for (unsigned int i = 0; i < animations->channels[my_anim_node].tra_keys_count - 1; i++) {
-			double t = animations->channels[my_anim_node].tra_keys[i].time;
+		double prev_t, next_t, t_factor;
+		vec3 vf, vi, p;
+		
+		// work out previous frame and next frame numbers
+		for (int i = 0; i <
+			animations->channels[my_anim_node].tra_keys_count - 1; i++) {
+			double t;
+			
+			t = animations->channels[my_anim_node].tra_keys[i].time;
 			if (t >= anim_time) {
 				break;
 			}
@@ -118,16 +134,20 @@ void _recurse_anim_tree (
 			next_frame_index = i + 1;
 		}
 		// get prev and next pos and time
-		double prev_t = animations->channels[my_anim_node].tra_keys[previous_frame_index].time;
-		double next_t = animations->channels[my_anim_node].tra_keys[next_frame_index].time;
-		double t_factor = (anim_time - prev_t) / (next_t - prev_t);
+		prev_t =
+			animations->channels[my_anim_node].tra_keys[previous_frame_index].time;
+		next_t =
+			animations->channels[my_anim_node].tra_keys[next_frame_index].time;
+		t_factor = (anim_time - prev_t) / (next_t - prev_t);
 		// interp position
-		vec3 vf = animations->channels[my_anim_node].tra_keys[next_frame_index].tra;
-		vec3 vi = animations->channels[my_anim_node].tra_keys[previous_frame_index].tra;
-		vec3 p = vf * t_factor + vi * (1.0 - t_factor);
+		vf = animations->channels[my_anim_node].tra_keys[next_frame_index].tra;
+		vi = animations->channels[my_anim_node].tra_keys[previous_frame_index].tra;
+		p = vf * t_factor + vi * (1.0 - t_factor);
 		trans_mat = translate (identity_mat4 (), p);
 	} else if (1 == animations->channels[my_anim_node].tra_keys_count) {
-		vec3 vf = animations->channels[my_anim_node].tra_keys[0].tra;
+		vec3 vf;
+		
+		vf = animations->channels[my_anim_node].tra_keys[0].tra;
 		trans_mat = translate (identity_mat4 (), vf);
 	}
 	
@@ -135,9 +155,14 @@ void _recurse_anim_tree (
 	if (animations->channels[my_anim_node].rot_keys_count > 1) {
 		int previous_frame_index = 0;
 		int next_frame_index = 1;
+		double prev_t, next_t, t_factor;
+		versor qf, qi, slerped;
 
-		for (unsigned int i = 0; i < animations->channels[my_anim_node].rot_keys_count - 1; i++) {
-			double t = animations->channels[my_anim_node].rot_keys[i].time;
+		for (int i = 0; i <
+			animations->channels[my_anim_node].rot_keys_count - 1; i++) {
+			double t;
+			
+			t = animations->channels[my_anim_node].rot_keys[i].time;
 			if (t >= anim_time) {
 				break;
 			}
@@ -145,21 +170,25 @@ void _recurse_anim_tree (
 			next_frame_index = i + 1;
 		}
 		// get prev and next pos and time
-		double prev_t = animations->channels[my_anim_node].rot_keys[previous_frame_index].time;
-		double next_t = animations->channels[my_anim_node].rot_keys[next_frame_index].time;
-		double t_factor = (anim_time - prev_t) / (next_t - prev_t);
+		prev_t =
+			animations->channels[my_anim_node].rot_keys[previous_frame_index].time;
+		next_t =
+			animations->channels[my_anim_node].rot_keys[next_frame_index].time;
+		t_factor = (anim_time - prev_t) / (next_t - prev_t);
 		// get the two quaternions
-		versor qf = animations->channels[my_anim_node].rot_keys[next_frame_index].rot;
-		versor qi = animations->channels[my_anim_node].rot_keys[previous_frame_index].rot;
-		versor slerped = slerp (qi, qf, t_factor);
+		qf = animations->channels[my_anim_node].rot_keys[next_frame_index].rot;
+		qi = animations->channels[my_anim_node].rot_keys[previous_frame_index].rot;
+		slerped = slerp (qi, qf, t_factor);
 		rot_mat = quat_to_mat4 (slerped);
 	} else if (1 == animations->channels[my_anim_node].rot_keys_count) {
-		versor qf = animations->channels[my_anim_node].rot_keys[0].rot;
+		versor qf;
+		
+		qf = animations->channels[my_anim_node].rot_keys[0].rot;
 		rot_mat = quat_to_mat4 (qf);
 	}
 	
-	mat4 node_mat = trans_mat * rot_mat; // * scale mat at end
-	mat4 global_trans_mat = parent_mat * node_mat;
+	node_mat = trans_mat * rot_mat; // * scale mat at end
+	global_trans_mat = parent_mat * node_mat;
 
 	// update bone mats if bone linked to this node
 	if (anim_node_bone_ids[my_anim_node] > -1) {
@@ -180,14 +209,7 @@ void _recurse_anim_tree (
 }
 
 bool load_mesh (const char* file_name) {
-	printf ("loading mesh %s\n", file_name);
-	
-	FILE* f = fopen (file_name, "r");
-	if (!f) {
-		fprintf (stderr, "ERROR opening file %s\n", file_name);
-		return false;
-	}
-	
+	FILE* f;
 	float* vps = NULL;
 	float* vns = NULL;
 	float* vts = NULL;
@@ -200,11 +222,23 @@ bool load_mesh (const char* file_name) {
 	int vb_comps = 0;
 	int offset_mat_comps = 0;
 	int current_anim_index = -1;
-	
 	char line[1024];
+	GLuint points_vbo = 0;
+	GLuint normals_vbo = 0;
+	GLuint texcoords_vbo = 0;
+	GLuint bone_ids_vbo = 0;
+	
+	printf ("loading mesh %s\n", file_name);
+	f = fopen (file_name, "r");
+	if (!f) {
+		fprintf (stderr, "ERROR opening file %s\n", file_name);
+		return false;
+	}
+	
 	while (fgets (line, 1024, f)) {
 		if ('@' == line[0]) {
 			char code_str[32];
+			
 			sscanf (line, "@%s\n", code_str);
 			printf ("code: %s\n", code_str);
 			if (strcmp (code_str, "Anton's") == 0) {
@@ -276,6 +310,7 @@ bool load_mesh (const char* file_name) {
 			//@root_transform comps 16
 			} else if (strcmp (code_str, "root_transform") == 0) {
 				int mat_comps = 0;
+				
 				sscanf (line, "@root_transform comps %i\n", &mat_comps);
 				for (int j = 0; j < mat_comps; j++) {
 					fscanf (f, "%f", &root_transform_mat.m[j]);
@@ -297,6 +332,7 @@ bool load_mesh (const char* file_name) {
 			//@hierarchy nodes 5
 			} else if (strcmp (code_str, "hierarchy") == 0) {
 				int nodes = 0;
+				
 				sscanf (line, "@hierarchy nodes %i\n", &nodes);
 				anim_node_parents = (int*)malloc (nodes * sizeof (int));
 				anim_node_bone_ids = (int*)malloc (nodes * sizeof (int));
@@ -352,17 +388,19 @@ bool load_mesh (const char* file_name) {
 				int node = 0;
 				int count = 0;
 				int comps = 0;
+				
 				sscanf (
 					line, "@tra_keys node %i count %i comps %i\n", &node, &count, &comps
 				);
-				animations[current_anim_index].channels[node].tra_keys = (TraAnimKey*)malloc (
-					count * sizeof (TraAnimKey));
+				animations[current_anim_index].channels[node].tra_keys =
+					(TraAnimKey*)malloc (count * sizeof (TraAnimKey));
 				/*
 				vec3 tra;
 				double time;
 				*/
 				for (int i = 0; i < count; i++) {
-					animations[current_anim_index].channels[node].tra_keys[i].tra = vec3 (0.0f, 0.0f, 0.0f);
+					animations[current_anim_index].channels[node].tra_keys[i].tra =
+						vec3 (0.0f, 0.0f, 0.0f);
 					animations[current_anim_index].channels[node].tra_keys[i].time = 0.0;
 				}
 				animations[current_anim_index].channels[node].tra_keys_count = count;
@@ -386,8 +424,8 @@ bool load_mesh (const char* file_name) {
 				sscanf (
 					line, "@rot_keys node %i count %i comps %i\n", &node, &count, &comps
 				);
-				animations[current_anim_index].channels[node].rot_keys = (RotAnimKey*)malloc (
-					count * sizeof (RotAnimKey));
+				animations[current_anim_index].channels[node].rot_keys =
+					(RotAnimKey*)malloc (count * sizeof (RotAnimKey));
 				/*
 				versor rot;
 				double time;
@@ -416,7 +454,6 @@ bool load_mesh (const char* file_name) {
 	}
 	fclose (f);
 	
-	GLuint points_vbo = 0;
 	glGenBuffers (1, &points_vbo);
 	glBindBuffer (GL_ARRAY_BUFFER, points_vbo);
 	glBufferData (
@@ -425,7 +462,7 @@ bool load_mesh (const char* file_name) {
 		vps,
 		GL_STATIC_DRAW
 	);
-	GLuint normals_vbo = 0;
+	
 	glGenBuffers (1, &normals_vbo);
 	glBindBuffer (GL_ARRAY_BUFFER, normals_vbo);
 	glBufferData (
@@ -434,7 +471,7 @@ bool load_mesh (const char* file_name) {
 		vns,
 		GL_STATIC_DRAW
 	);
-	GLuint texcoords_vbo = 0;
+	
 	glGenBuffers (1, &texcoords_vbo);
 	glBindBuffer (GL_ARRAY_BUFFER, texcoords_vbo);
 	glBufferData (
@@ -443,7 +480,7 @@ bool load_mesh (const char* file_name) {
 		vts,
 		GL_STATIC_DRAW
 	);
-	GLuint bone_ids_vbo = 0;
+	
 	glGenBuffers (1, &bone_ids_vbo);
 	glBindBuffer (GL_ARRAY_BUFFER, bone_ids_vbo);
 	glBufferData (
@@ -463,9 +500,11 @@ bool load_mesh (const char* file_name) {
 	glEnableVertexAttribArray (2);
 	glBindBuffer (GL_ARRAY_BUFFER, texcoords_vbo);
 	glVertexAttribPointer (2, vt_comps, GL_FLOAT, GL_FALSE, 0, NULL);
-	glEnableVertexAttribArray (3);
-	glBindBuffer (GL_ARRAY_BUFFER, bone_ids_vbo);
-	glVertexAttribPointer (3, 1, GL_FLOAT, GL_FALSE, 0, NULL);
+	if (animation_count > 0) {
+		glEnableVertexAttribArray (3);
+		glBindBuffer (GL_ARRAY_BUFFER, bone_ids_vbo);
+		glVertexAttribPointer (3, 1, GL_FLOAT, GL_FALSE, 0, NULL);
+	}
 
 	printf ("mesh gpu data created\n");
 	
@@ -482,17 +521,15 @@ bool load_mesh (const char* file_name) {
 }
 
 bool start_gl () {
+	//
 	// fire up opengl
 	if (!glfwInit ()) {
 		fprintf (stderr, "ERROR: could not start GLFW3\n");
 		return false;
 	}
-	int width = 640;
-	int height = 480;
 	glfwWindowHint (GLFW_SAMPLES, 16);
-	window = glfwCreateWindow (
-		width, height, "Custom Skinned Mesh Format", NULL, NULL
-	);
+	window = glfwCreateWindow (width, height, "Custom Skinned Mesh Format", NULL,
+		NULL);
 	if (!window) {
 		fprintf (stderr, "ERROR: could not open window with GLFW3\n");
 		glfwTerminate();
@@ -501,8 +538,8 @@ bool start_gl () {
 	glfwMakeContextCurrent (window);
 	glewExperimental = GL_TRUE;
 	glewInit ();
-	const GLubyte* renderer = glGetString (GL_RENDERER); // get renderer string
-	const GLubyte* version = glGetString (GL_VERSION); // version as a string
+	const GLubyte* renderer = glGetString (GL_RENDERER);
+	const GLubyte* version = glGetString (GL_VERSION);
 	printf ("Renderer: %s\n", renderer);
 	printf ("OpenGL version supported %s\n", version);
 	return true;
@@ -703,6 +740,8 @@ int main (int argc, char** argv) {
 	mat4 P, V;
 	double dur = 0.0;
 	float bpoints = 0.0f;
+	double previous_seconds;
+	double anim_timer = 0.0;
 	GLuint bpoints_vbo = 0;
 	GLuint bpoints_vao = 0;
 	
@@ -734,19 +773,7 @@ int main (int argc, char** argv) {
 		vec3 (0.0f, 0.0f, 0.0),
 		normalise (vec3 (0.0f, 10.0f, -10.0f))
 	);
-	P = perspective (
-		67.0f, (float)width / (float)height, 0.01f, 1000.0f
-	);
-	
-	glUseProgram (shader_programme);
-	glUniformMatrix4fv (P_loc, 1, GL_FALSE, P.m);
-	glUniformMatrix4fv (V_loc, 1, GL_FALSE, V.m);
-	glUseProgram (no_skin_shader_programme);
-	glUniformMatrix4fv (no_skin_P_loc, 1, GL_FALSE, P.m);
-	glUniformMatrix4fv (no_skin_V_loc, 1, GL_FALSE, V.m);
-	glUseProgram (psp);
-	glUniformMatrix4fv (pP_loc, 1, GL_FALSE, P.m);
-	glUniformMatrix4fv (pV_loc, 1, GL_FALSE, V.m);
+	P = perspective (67.0f, (float)width / (float)height, 0.01f, 100.0f);
 	
 	print_all_keys ();
 	
@@ -756,11 +783,12 @@ int main (int argc, char** argv) {
 	
 	glClearColor (0.2, 0.2, 0.2, 1.0);
 	glDepthFunc (GL_LESS);
-	double previous_seconds = glfwGetTime ();
-	double anim_timer = 0.0;
+	previous_seconds = glfwGetTime ();
 	while (!glfwWindowShouldClose (window)) {
-		double current_seconds = glfwGetTime ();
-		double elapsed_seconds = current_seconds - previous_seconds;
+		double current_seconds, elapsed_seconds;
+		
+		current_seconds = glfwGetTime ();
+		elapsed_seconds = current_seconds - previous_seconds;
 		previous_seconds = current_seconds;
 		anim_timer += elapsed_seconds;
 		if (anim_timer > dur) {
@@ -768,11 +796,14 @@ int main (int argc, char** argv) {
 		}
 		
 		glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		
 		glEnable (GL_DEPTH_TEST);
 		if (animation_count > 0) {
 			glUseProgram (shader_programme);
-		
+			if (cam_dirty) {
+				glUniformMatrix4fv (P_loc, 1, GL_FALSE, P.m);
+				glUniformMatrix4fv (V_loc, 1, GL_FALSE, V.m);
+			}
+			
 			// anim update
 			_recurse_anim_tree (
 				animations,
@@ -788,6 +819,10 @@ int main (int argc, char** argv) {
 			glDisable (GL_DEPTH_TEST);
 			glEnable (GL_PROGRAM_POINT_SIZE);
 			glUseProgram (psp);
+			if (cam_dirty) {
+				glUniformMatrix4fv (pP_loc, 1, GL_FALSE, P.m);
+				glUniformMatrix4fv (pV_loc, 1, GL_FALSE, V.m);
+			}
 			glBindVertexArray (bpoints_vao);
 			for (int i = 0; i < bone_count; i++) {
 				glUniformMatrix4fv (pM_loc, 1, GL_FALSE, offset_mats[i].m);
@@ -797,18 +832,21 @@ int main (int argc, char** argv) {
 			glDisable (GL_PROGRAM_POINT_SIZE);
 		} else {
 			glUseProgram (no_skin_shader_programme);
+			if (cam_dirty) {
+				glUniformMatrix4fv (no_skin_P_loc, 1, GL_FALSE, P.m);
+				glUniformMatrix4fv (no_skin_V_loc, 1, GL_FALSE, V.m);
+			}
 			glBindVertexArray (vao);
 			glDrawArrays (GL_TRIANGLES, 0, vert_count);
 		}
 		
-		
+		cam_dirty = false;
 		glfwPollEvents ();
 		glfwSwapBuffers (window);
 		if (GLFW_PRESS == glfwGetKey (window, GLFW_KEY_ESCAPE)) {
 			glfwSetWindowShouldClose (window, 1);
 		}
-	}
-	
+	} // endwhile
 	glfwTerminate();
 	
 	return 0;

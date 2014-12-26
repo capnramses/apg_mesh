@@ -1,0 +1,7 @@
+2014 dec 26 - anton
+* tidied up viewer.c
+* added fix so non-skinned meshes dont enable vertex attrib #3
+caused problem on some drivers
+* added isnan() check for generated tangents
+* 3sf for tangents, normals, texcoords, and 2dp for points
+about 50% of filesize - still bigger than obj usually though

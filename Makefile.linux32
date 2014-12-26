@@ -1,11 +1,9 @@
 FLAGS = -Ofast -Wall -Wfatal-errors -pedantic -Wextra -fmessage-length=0 -m32
 LIB_PATH = lib/linux_i386/
-I = -I include/
 DLIBS = -lGL -lX11 -lXxf86vm -lXrandr -lpthread -lXi -lz
 
 INCLUDES = $(wildcard include/*.h)
 
-LIB_PATH = lib/linux_i386/
 SLIBS = $(LIB_PATH)libGLEW.a $(LIB_PATH)libglfw3.a $(LIB_PATH)libassimp.a
 
 .PHONY : all
@@ -13,11 +11,12 @@ all: converter viewer
 clean:
 	rm *.o; rm view32; rm conv32
 converter : obj/converter.o obj/mesh_loader.o $(INCLUDES)
-	g++ ${FLAGS} -o conv32 obj/converter.o obj/mesh_loader.o -I include/ $(SLIBS) ${DLIBS}
+	g++ ${FLAGS} -o conv32 obj/converter.o obj/mesh_loader.o -I include/ \
+	$(SLIBS) ${DLIBS}
 viewer : obj/viewer.o $(INCLUDES)
 	g++ ${FLAGS} -o view32 obj/viewer.o -I include/ $(SLIBS) ${DLIBS}
 	
-#--------------------rule for making objects from cpp files--------------------#
+#--------------------rule for making objects from cpp files-------------------#
 obj/%.o: src/%.cpp  $(INCLUDES)
 	@echo ''
 	@echo '~~~~~~~~~~~~~~~~ building file $< ~~~~~~~~~~~~~~~~~~~~'
