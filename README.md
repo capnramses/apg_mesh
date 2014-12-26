@@ -44,6 +44,12 @@ mesh is given at the top of the file). Example of vertex points "vp" block:
     -0.298635 2.503061 -0.224913
     ...
 
+* Points are assumed to be in meters. I then round to the centimeter to reduce
+file size to ~5 bytes per value.
+* Normals and tangents are rounded to 3 s.f. as they are normalised later
+anyway.
+* Texture coordinates are rounded to 3 s.f.
+
 ##Per-Mesh Data##
 
 * single-line header with date of format being used
@@ -68,13 +74,6 @@ no library is required to read the output .apg files.
 I have a binary option but it actually isn't very beneficial in terms of size.
 I might look at this again later. Limited-precision floats and .obj-like
 optimisation would be key.
-
-###Tinkering with data-point accuracy to reduce file size###
-
-* If points are assumed to be in meters, then we can probably round to the
-centimetre or millimetre to reduce file size to ~5 bytes per value.
-* normals could be rounded to 4 s.f. as they are normalised later anyway.
-* tangents could be something similar to normals.
 
 ###Further reducing or expanding tags###
 
