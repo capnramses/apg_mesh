@@ -8,7 +8,7 @@ I got tired of the complexity of animated mesh formats, so wrote my own. I'm
 sharing this, not because I think others will use my format, but that it might
 show how easy it is to do yourself a simple way.
 
-##Motivation:##
+##Motivation##
 
 * Can easily read with a few lines of C - no libraries required
 * Simplified animation and skeleton structure
@@ -73,7 +73,7 @@ optimisation would be key.
 
 * If points are assumed to be in meters, then we can probably round to the
 centimetre or millimetre to reduce file size to ~5 bytes per value.
-* normals could be truncated to 2 d.p. as they are normalised later anyway.
+* normals could be rounded to 4 s.f. as they are normalised later anyway.
 * tangents could be something similar to normals.
 
 ###Further reducing or expanding tags###
@@ -81,3 +81,7 @@ centimetre or millimetre to reduce file size to ~5 bytes per value.
 Some tags contain redundant information which could be tidied. Animation names
 are not respected because I've had difficulty exporting these myself from
 Blender, but should be trivial to 
+
+###Blender Export Script###
+
+I started writing an exporter to .apg from Blender.
