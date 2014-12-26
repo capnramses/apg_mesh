@@ -1,0 +1,20 @@
+L = lib/linux_x86_64/
+I = -I include/
+STA_C = lib/linux_x86_64/libassimp.a
+STA_V = ${L}libGLEW.a ${L}libglfw3.a
+DYN_C = -lz
+DYN_V = -lGL -lX11 -lXxf86vm -lXrandr -lpthread -lXi
+
+all: converter viewer
+clean:
+	rm *.o; rm view64; rm conv64
+mesh_loader.o: mesh_loader.cpp
+	g++ -g -c mesh_loader.cpp ${I}
+converter.o: converter.c
+	g++ -g -c converter.c ${I}
+viewer.o: viewer.c
+	g++ -g -c viewer.c ${I}
+converter: src/converter.o src/mesh_loader.o
+	g++ -g -o ./conv64 src/converter.o src/mesh_loader.o ${STA_C} -L${L} ${DYN_C}
+viewer: viewer.o
+	g++ -g -o ./view64 src/viewer.o ${STA_V} -L${L} ${DYN_V}
