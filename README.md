@@ -8,6 +8,16 @@ I got tired of the complexity of animated mesh formats, so wrote my own. I'm
 sharing this, not because I think others will use my format, but that it might
 show how easy it is to do yourself a simple way.
 
+##Usage##
+
+Converter:
+
+  ./conv input.dae [-o output.apg] [-bin]
+
+Viewer:
+
+  ./view mesh.apg
+
 ##Motivation##
 
 * Can easily read with a few lines of C - no libraries required
