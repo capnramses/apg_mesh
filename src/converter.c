@@ -7,7 +7,7 @@
 // uses the Assimp asset importer library http://assimp.sourceforge.net/
 //
 
-#include "mesh_loader.h"
+#include "mesh_loader.hpp"
 #include <stdio.h>
 #include <assert.h>
 #include <stdbool.h>
@@ -91,8 +91,8 @@ void print_hierarchy (FILE* f, Anim_Node* node, int parent_id) {
 	int i;
 	
 	if (bin_mode) {
-		fwrite (&parent_id, sizeof (int), i, f);
-		fwrite (&node->bone_index, sizeof (int), i, f);
+		fwrite (&parent_id, sizeof (int), 1, f);
+		fwrite (&node->bone_index, sizeof (int), 1, f);
 	} else {
 		fprintf (f, "parent %i bone_id %i\n", parent_id, node->bone_index);
 	}
@@ -298,9 +298,9 @@ bool write_output (const char* file_name) {
 		
 		for (i = 0; i < animation_count; i++) {
 			double duration = 0.0;
-			int tra_comps = 3;
+			//int tra_comps = 3;
 			int pos_keys = 0;
-			int rot_comps = 4;
+			//int rot_comps = 4;
 			int rot_keys = 0;
 			
 			count_pos_keys (root_node, pos_keys, duration);
@@ -377,9 +377,9 @@ bool write_output_bin (const char* file_name) {
 		
 	for (i = 0; i < animation_count; i++) {
 		double duration = 0.0;
-		int tra_comps = 3;
+		//int tra_comps = 3;
 		int pos_keys = 0;
-		int rot_comps = 4;
+		//int rot_comps = 4;
 		int rot_keys = 0;
 		
 		count_pos_keys (root_node, pos_keys, duration);
