@@ -3,7 +3,7 @@
 // Anton Gerdelan
 // antongerdelan.net
 // First version 3 Jan 2014
-// Revised: 26 Dec 2014
+// Revised: 27 Dec 2014
 // uses the Assimp asset importer library http://assimp.sourceforge.net/
 //
 
@@ -12,7 +12,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <string.h>
-#define VERSION "26DEC2014"
+#define VERSION "27DEC2014"
 
 /* TODO
 root transform for anim or whole mesh? think anim
@@ -26,6 +26,7 @@ Mesh mesh;
 //Animation* animations = NULL;
 char** my_argv;
 char output_file_name[2048];
+float bounding_radius;
 int vertex_count;
 int bone_count;
 int animation_count;
@@ -312,6 +313,8 @@ bool write_output (const char* file_name) {
 		}
 	}
 	
+	fprintf (f, "@bounding_radius %.2f", bounding_radius);
+		
 	fclose (f);
 	return true;
 }
@@ -410,8 +413,25 @@ bool read_input (const char* file_name) {
 	vertex_count = mesh.point_count;
 	bone_count = mesh.bone_count;
 	if (mesh.vps.size () > 0) {
+		unsigned int i;
+	
 		printf ("positions found\n");
 		has_vp = true;
+		
+		//
+		// work out bounding radius
+		printf ("checking vs %u vps\n",  mesh.vps.size () / 3);
+		for (i = 0; i < mesh.vps.size () / 3; i += 3) {
+			float d, x, y, z;
+			
+			x = mesh.vps[i];
+			y = mesh.vps[i + 1];
+			z = mesh.vps[i + 2];
+			d = sqrt (x * x + y * y + z * z);
+			if (d > bounding_radius) {
+				bounding_radius = d;
+			}
+		}
 	}
 	if (mesh.vns.size () > 0) {
 		printf ("normals found\n");
