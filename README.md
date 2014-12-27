@@ -173,6 +173,12 @@ OpenGL-based Viewer:
 
 ##Future Ideas##
 
+###Bone Weights###
+
+I haven't tested any meshes with vertices that are weighted to more than one
+bone. It should be fairly trivial to add weights after each bone id, and have
+comps >1 for the bone id block.
+
 ###Binary format###
 
 I have a binary option but it actually isn't very beneficial in terms of size.
