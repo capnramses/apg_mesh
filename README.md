@@ -106,11 +106,17 @@ Firstly, a skeleton of "bones" which can deform vertices:
 
     @skeleton bones 2 animations 1
 
-That's it! I give my animation hierarchy in a separate structure. It's possible
-to create a skeleton with bones (or higher-level objects in Blender) that don't
-deform a vertex directly, but do affect bones lower down in the hierarchy. To
-create a hierarchy with these intermediate as well as deforming bones, I use a
-separate concept called "nodes" in a tree.
+That's it! The bones here mean that each vertex will have bone id 0 or 1, and
+that my vertex shader will have an array of 2 animation matrices as a uniform. 
+
+I give my animation hierarchy in a separate structure. Not all bones in the
+skeleton will directly affect a vertex; it's possible to have intermediate
+animated bones that still affect bones further down in the hierarchy. We don't
+want these to send a matrix to the vertex shader - these are to be calculated
+away in animation code. To separate these concepts I use a separate concept
+called "nodes" in my animation hierarchy. Nodes may or may not be directly
+tied to a bone - if so I provide the index of that bone. If the node is purely
+an intermediate then I give -1 as the bone index:
 
     @hierarchy nodes 5
     parent -1 bone_id -1
@@ -122,8 +128,7 @@ separate concept called "nodes" in a tree.
 Each node has an identifying index, which is its order of appearance (the first
 one is 0, the second one is 1, etc.). A node may have a parent, given by index
 number, or no parent, indicated by -1. This gives a tree hierarchy in a simple
-collection of lines. Each node may or may not directly affect one of the
-vertex-deforming bones. I indicate that in the same way. In my mesh I only
+collection of lines. In my mesh I only
 created 2 deforming bones in a skeleton, but Blender has exported a tree of 5
 nodes - this includes the skeleton as a whole, and the higher-level container
 object, and some other attached object (a light source?). In any case, it's
