@@ -94,8 +94,65 @@ Tangents can contain a fourth coordinate convention to be used if desired.
 * skeleton root transform
 * skeleton offset matrix
 * key-framed animations; translation, rotation, and scale keys
+* a bounding radius (useful for frustum culling)
 
-All of these are also optional. This is the main feature of the format.
+All of these are also optional.
+
+The simple skeleton and animation structure is the main feature of the format -
+it's designed to drop almost directly into shader uniforms. To make the system
+clear there are two concepts:
+
+Firstly, a skeleton of "bones" which can deform vertices:
+
+    @skeleton bones 2 animations 1
+
+That's it! I give my animation hierarchy in a separate structure. It's possible
+to create a skeleton with bones (or higher-level objects in Blender) that don't
+deform a vertex directly, but do affect bones lower down in the hierarchy. To
+create a hierarchy with these intermediate as well as deforming bones, I use a
+separate concept called "nodes" in a tree.
+
+    @hierarchy nodes 5
+    parent -1 bone_id -1
+    parent 0 bone_id -1
+    parent 1 bone_id 0
+    parent 2 bone_id 1
+    parent 0 bone_id -1
+
+Each node has an identifying index, which is its order of appearance (the first
+one is 0, the second one is 1, etc.). A node may have a parent, given by index
+number, or no parent, indicated by -1. This gives a tree hierarchy in a simple
+collection of lines. Each node may or may not directly affect one of the
+vertex-deforming bones. I indicate that in the same way. In my mesh I only
+created 2 deforming bones in a skeleton, but Blender has exported a tree of 5
+nodes - this includes the skeleton as a whole, and the higher-level container
+object, and some other attached object (a light source?). In any case, it's
+fine to represent all of these here and preserve and inherited transformations.
+Unused nodes can be pruned.
+
+Animations are defined as a series of keys.
+
+   @animation name TODO duration 1.000000
+
+Each node in the hierarchy can have series' of rotation, translation, and
+scale keys. Here we have a series of translation keys. Each one has its own
+time value 't'. We can see this affects nodes number 3, giving 6 XYZ translation
+values at different times in the animation sequence:
+
+    @tra_keys node 2 count 6 comps 3
+    t 0.040000 TRA -0.727390 0.475569 -0.236947
+    t 0.281117 TRA -0.727390 0.475569 -0.236947
+    t 0.445874 TRA -0.727390 0.475569 -0.236947
+    t 0.627053 TRA -0.727390 0.475569 -0.236947
+    t 0.797642 TRA -0.727390 0.475569 -0.236947
+    t 1.000000 TRA -0.727390 0.475569 -0.236947
+
+Finally, the mesh format also provides a bounding radius, which it calculates
+from the vertex with the biggest straight-line distance from the origin:
+
+    @bounding_radius 3.01
+
+This is indented to be used with frustum culling algorithms.
 
 ##Dependencies##
 
