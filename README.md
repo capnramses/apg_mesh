@@ -113,10 +113,10 @@ I give my animation hierarchy in a separate structure. Not all bones in the
 skeleton will directly affect a vertex; it's possible to have intermediate
 animated bones that still affect bones further down in the hierarchy. We don't
 want these to send a matrix to the vertex shader - these are to be calculated
-away in animation code. To separate these concepts I use a separate concept
-called "nodes" in my animation hierarchy. Nodes may or may not be directly
-tied to a bone - if so I provide the index of that bone. If the node is purely
-an intermediate then I give -1 as the bone index:
+away in animation code. To separate these concepts I use a more generic "node"
+in my animation hierarchy. Nodes may or may not be directly tied to a bone - if
+so I provide the index of that bone. If the node is purely an intermediate then
+I give -1 as the bone index:
 
     @hierarchy nodes 5
     parent -1 bone_id -1
