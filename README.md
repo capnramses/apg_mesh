@@ -158,7 +158,7 @@ from the vertex with the biggest straight-line distance from the origin:
 
     @bounding_radius 3.01
 
-This is indented to be used with frustum culling algorithms.
+This is intended to be used with frustum culling algorithms.
 
 ##Dependencies##
 
