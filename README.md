@@ -142,7 +142,7 @@ Animations are defined as a series of keys.
 
 Each node in the hierarchy can have series' of rotation, translation, and
 scale keys. Here we have a series of translation keys. Each one has its own
-time value 't'. We can see this affects node number 3, giving 6 XYZ translation
+time value 't'. We can see this affects node number 2, giving 6 XYZ translation
 values at different times in the animation sequence:
 
     @tra_keys node 2 count 6 comps 3
