@@ -133,7 +133,7 @@ collection of lines. In my mesh I only
 created 2 deforming bones in a skeleton, but Blender has exported a tree of 5
 nodes - this includes the skeleton as a whole, and the higher-level container
 object, and some other attached object (a light source?). In any case, it's
-fine to represent all of these here and preserve and inherited transformations.
+fine to represent all of these here and preserve inherited transformations.
 Unused nodes can be pruned.
 
 Animations are defined as a series of keys.
