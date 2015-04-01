@@ -40,6 +40,10 @@ struct TraAnimKey {
 	vec3 tra;
 	double time;
 };
+struct ScaAnimKey {
+	vec3 sca;
+	double time;
+};
 struct RotAnimKey {
 	versor rot;
 	double time;
@@ -47,6 +51,8 @@ struct RotAnimKey {
 struct Channel {
 	TraAnimKey* tra_keys;
 	int tra_keys_count;
+	ScaAnimKey* sca_keys;
+	int sca_keys_count;
 	RotAnimKey* rot_keys;
 	int rot_keys_count;
 };
@@ -84,6 +90,11 @@ void print_all_keys () {
 				printf ("t %f\n", animations[i].channels[j].tra_keys[k].time);
 				print (animations[i].channels[j].tra_keys[k].tra);
 			}
+			for (int k = 0; k < animations[i].channels[j].sca_keys_count; k++) {
+				printf ("  a%ic%i sca_key %i\n", i, j, k);
+				printf ("t %f\n", animations[i].channels[j].sca_keys[k].time);
+				print (animations[i].channels[j].sca_keys[k].sca);
+			}
 			for (int k = 0; k < animations[i].channels[j].rot_keys_count; k++) {
 				printf ("  a%ic%i rot_key %i\n", i, j, k);
 				printf ("t %f\n", animations[i].channels[j].rot_keys[k].time);
@@ -106,13 +117,14 @@ void _recurse_anim_tree (
 	int my_anim_node,
 	mat4 parent_mat
 ) {
-	mat4 trans_mat, rot_mat, node_mat, global_trans_mat;
+	mat4 trans_mat, sca_mat, rot_mat, node_mat, global_trans_mat;
 
 	if (!animations) {
 		return;
 	}
 
 	trans_mat = identity_mat4 ();
+	sca_mat = identity_mat4 ();
 	rot_mat = identity_mat4 ();
 	// position
 	if (animations->channels[my_anim_node].tra_keys_count > 1) {
@@ -149,6 +161,43 @@ void _recurse_anim_tree (
 		
 		vf = animations->channels[my_anim_node].tra_keys[0].tra;
 		trans_mat = translate (identity_mat4 (), vf);
+	}
+
+	// scale
+	if (animations->channels[my_anim_node].sca_keys_count > 1) {
+		int previous_frame_index = 0;
+		int next_frame_index = 1;
+		double prev_t, next_t, t_factor;
+		vec3 vf, vi, p;
+		
+		// work out previous frame and next frame numbers
+		for (int i = 0; i <
+			animations->channels[my_anim_node].sca_keys_count - 1; i++) {
+			double t;
+			
+			t = animations->channels[my_anim_node].sca_keys[i].time;
+			if (t >= anim_time) {
+				break;
+			}
+			previous_frame_index = i;
+			next_frame_index = i + 1;
+		}
+		// get prev and next pos and time
+		prev_t =
+			animations->channels[my_anim_node].sca_keys[previous_frame_index].time;
+		next_t =
+			animations->channels[my_anim_node].sca_keys[next_frame_index].time;
+		t_factor = (anim_time - prev_t) / (next_t - prev_t);
+		// interp position
+		vf = animations->channels[my_anim_node].sca_keys[next_frame_index].sca;
+		vi = animations->channels[my_anim_node].sca_keys[previous_frame_index].sca;
+		p = vf * t_factor + vi * (1.0 - t_factor);
+		sca_mat = scale (identity_mat4 (), p);
+	} else if (1 == animations->channels[my_anim_node].sca_keys_count) {
+		vec3 vf;
+		
+		vf = animations->channels[my_anim_node].sca_keys[0].sca;
+		sca_mat = scale (identity_mat4 (), vf);
 	}
 	
 	// interp rotation
@@ -187,7 +236,7 @@ void _recurse_anim_tree (
 		rot_mat = quat_to_mat4 (qf);
 	}
 	
-	node_mat = trans_mat * rot_mat; // * scale mat at end
+	node_mat = trans_mat * rot_mat * sca_mat;
 	global_trans_mat = parent_mat * node_mat;
 
 	// update bone mats if bone linked to this node
@@ -368,6 +417,8 @@ bool load_mesh (const char* file_name) {
 					for (int j = 0; j < nodes; j++) {
 						animations[i].channels[j].tra_keys = NULL;
 						animations[i].channels[j].tra_keys_count = 0;
+						animations[i].channels[j].sca_keys = NULL;
+						animations[i].channels[j].sca_keys_count = 0;
 						animations[i].channels[j].rot_keys = NULL;
 						animations[i].channels[j].rot_keys_count = 0;
 					}
@@ -415,6 +466,39 @@ bool load_mesh (const char* file_name) {
 						&animations[current_anim_index].channels[node].tra_keys[i].tra.v[2]
 					);
 					//print (animations[current_anim_index].channels[node].tra_keys[i].tra);
+				}
+
+			//@sca_keys count 12 comps 3
+			} else if (strcmp (code_str, "sca_keys") == 0) {
+				int node = 0;
+				int count = 0;
+				int comps = 0;
+				
+				sscanf (
+					line, "@sca_keys node %i count %i comps %i\n", &node, &count, &comps
+				);
+				animations[current_anim_index].channels[node].sca_keys =
+					(ScaAnimKey*)malloc (count * sizeof (ScaAnimKey));
+				/*
+				vec3 tra;
+				double time;
+				*/
+				for (int i = 0; i < count; i++) {
+					animations[current_anim_index].channels[node].sca_keys[i].sca =
+						vec3 (0.0f, 0.0f, 0.0f);
+					animations[current_anim_index].channels[node].sca_keys[i].time = 0.0;
+				}
+				animations[current_anim_index].channels[node].sca_keys_count = count;
+				
+				//t 0.040000 SCA 0.000000 0.000000 0.000000
+				for (int i = 0; i < count; i++) {
+					fscanf (f, "t %lf SCA %f %f %f\n",
+						&animations[current_anim_index].channels[node].sca_keys[i].time,
+						&animations[current_anim_index].channels[node].sca_keys[i].sca.v[0],
+						&animations[current_anim_index].channels[node].sca_keys[i].sca.v[1],
+						&animations[current_anim_index].channels[node].sca_keys[i].sca.v[2]
+					);
+					//print (animations[current_anim_index].channels[node].sca_keys[i].sca);
 				}
 				
 			//@rot_keys count 12 comps 4

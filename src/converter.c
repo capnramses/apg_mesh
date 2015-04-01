@@ -49,9 +49,11 @@ bool has_skeleton;
 bool bin_mode; // binary write mode
 
 void count_pos_keys (Anim_Node* node, int& keys, double& duration);
+void count_sca_keys (Anim_Node* node, int& keys, double& duration);
 void count_rot_keys (Anim_Node* node, int& keys, double& duration);
 void print_hierarchy (FILE* f, Anim_Node* node, int parent_id);
 void print_tra_keys (FILE* f, Anim_Node* node);
+void print_sca_keys (FILE* f, Anim_Node* node);
 void print_rot_keys (FILE* f, Anim_Node* node);
 
 void count_pos_keys (Anim_Node* node, int& keys, double& duration) {
@@ -68,6 +70,23 @@ void count_pos_keys (Anim_Node* node, int& keys, double& duration) {
 	}
 	for (i = 0; i < node->num_children; i++) {
 		count_pos_keys (node->children[i], keys, duration);
+	}
+}
+
+void count_sca_keys (Anim_Node* node, int& keys, double& duration) {
+	int i;
+	
+	if (node->scale_keyframes.size () > 0) {
+		double longest_t;
+		keys += (int)node->scale_keyframes.size ();
+		longest_t = node->scale_keyframes[
+			node->scale_keyframes.size () - 1].time;
+		if (longest_t > duration) {
+			duration = longest_t;
+		}
+	}
+	for (i = 0; i < node->num_children; i++) {
+		count_sca_keys (node->children[i], keys, duration);
 	}
 }
 
@@ -135,6 +154,42 @@ void print_tra_keys (FILE* f, Anim_Node* node) {
 	}
 	for (i = 0; i < node->num_children; i++) {
 		print_tra_keys (f, node->children[i]);
+	}
+}
+
+void print_sca_keys (FILE* f, Anim_Node* node) {
+	int comps = 3;
+	int count = 0;
+	int i;
+	
+	count = (int)node->scale_keyframes.size ();
+	if (count > 0) {
+		if (bin_mode) {
+			char c = 't';
+			fwrite (&c, 1, 1, f);
+			fwrite (&node->id, sizeof (int), 1, f);
+			fwrite (&count, sizeof (int), 1, f);
+		} else {
+			fprintf (f, "@sca_keys node %i count %i comps %i\n", node->id, count, comps);
+		}
+		for (i = 0; i < count; i++) {
+			if (bin_mode) {
+				fwrite (&node->scale_keyframes[i].time, sizeof (float), 1, f);
+				fwrite (node->scale_keyframes[i].v.v, sizeof (float), 3, f);
+			} else {
+				fprintf (
+					f,
+					"t %f SCA %f %f %f\n",
+					node->scale_keyframes[i].time,
+					node->scale_keyframes[i].v.v[0],
+					node->scale_keyframes[i].v.v[1],
+					node->scale_keyframes[i].v.v[2]
+				);
+			}
+		}
+	}
+	for (i = 0; i < node->num_children; i++) {
+		print_sca_keys (f, node->children[i]);
 	}
 }
 
@@ -309,6 +364,7 @@ bool write_output (const char* file_name) {
 			
 			fprintf (f, "@animation name TODO duration %f\n", duration);
 			print_tra_keys (f, root_node);
+			print_sca_keys (f, root_node);
 			print_rot_keys (f, root_node);
 		}
 	}
@@ -390,6 +446,7 @@ bool write_output_bin (const char* file_name) {
 		
 		fwrite (&duration, sizeof (float), 1, f);
 		print_tra_keys (f, root_node);
+		print_sca_keys (f, root_node);
 		print_rot_keys (f, root_node);
 	}
 	
