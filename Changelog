@@ -1,3 +1,7 @@
+2015 apr 1 - anton
+* mesh_loader.cpp: fixed bug. convert_assimp_matrix() was creating a row-major
+matrix for some reason. transposed 
+
 2015 mar 24 - anton
 * typo corrected in readme
 

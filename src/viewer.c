@@ -196,6 +196,7 @@ void _recurse_anim_tree (
 			root_transform_mat * global_trans_mat *
 			offset_mats[anim_node_bone_ids[my_anim_node]];
 	}
+	//print (offset_mats[1]);
 
 	// transform children
 	for (int i = 0 ; i < anim_node_num_children[my_anim_node]; i++) {
@@ -811,6 +812,9 @@ int main (int argc, char** argv) {
 				0,
 				identity_mat4 ()
 			);
+			//printf ("0 and 1 of %i\n", bone_count);
+			//print (current_bone_mats[0]);
+			//print (current_bone_mats[1]);
 			glUniformMatrix4fv (B_locs[0], bone_count, GL_FALSE,
 				current_bone_mats[0].m);
 			glBindVertexArray (vao);

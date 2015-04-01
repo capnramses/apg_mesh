@@ -47,10 +47,10 @@ Mesh::Mesh () {
 /* convert assimp's weirdly constructed row-order matrices in one of mine */ 
 mat4 convert_assimp_matrix (aiMatrix4x4 m) {
 	return mat4 (
-		1.0f, 0.0f, 0.0f, m.a4,
-		0.0f, 1.0f, 0.0f, m.b4,
-		0.0f, 0.0f, 1.0f, m.c4,
-		0.0f, 0.0f, 0.0f, m.d4
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		m.a4, m.b4, m.c4, m.d4
 	);
 }
 
@@ -220,8 +220,7 @@ Mesh load_mesh (const char* file_name, bool correct_coords) {
 				result.bone_names.push_back (bone->mName);
 				// store offset matrix for bone (bone pos in mesh)
 				result.bone_offset_mats[curr_bone] = convert_assimp_matrix (
-					bone->mOffsetMatrix
-				);
+					bone->mOffsetMatrix);
 				// store bone id for each vertex weighted by this bone
 				// TODO NOTE: this only allows 1 bone influencing each vertex
 				//printf ("db: weights loop\n");
