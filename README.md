@@ -111,8 +111,8 @@ that my vertex shader will have an array of 2 animation matrices as a uniform.
 
 I give my animation hierarchy in a separate structure. Not all bones in the
 skeleton will directly affect a vertex; it's possible to have intermediate
-animated bones aren't weighted to any vertices, but still affect bones further
-down in the hierarchy that are. We don't
+animated bones that aren't weighted to any vertices, but still affect bones further
+down in the hierarchy which are. We don't
 want these to send a matrix to the vertex shader - these are to be calculated
 away in animation code. To separate these concepts I use a more generic "node"
 in my animation hierarchy. Nodes may or may not be directly tied to a bone - if
@@ -125,6 +125,8 @@ I give -1 as the bone index:
     parent 1 bone_id 0
     parent 2 bone_id 1
     parent 0 bone_id -1
+
+![diagram of skeleton](https://github.com/capnramses/apg_mesh/blob/master/diagram.png)
 
 Each node has an identifying index, which is its order of appearance (the first
 one is 0, the second one is 1, etc.). A node may have a parent, given by index
