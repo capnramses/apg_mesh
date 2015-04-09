@@ -1,8 +1,10 @@
-#Converter to .apg Animated 3d Mesh Format#
+#apg_mesh#
 
 .apg is a simplified ASCII mesh format that supports tangents and skinned
 animations, and can be easily parsed without needing a library. The downside is
 that there is no data optimisation.
+
+This project has a many formats-to-apg converter, and an apg 3d viewer programme.
 
 I got tired of the complexity of animated mesh formats, so wrote my own. I'm
 sharing this, not because I think others will use my format, but that it might
@@ -127,8 +129,6 @@ I give -1 as the bone index:
     parent 0 bone_id -1
 
 ![diagram of skeleton](diagram.png)
-
-https://github.com/capnramses/apg_mesh/blob/master/diagram.png
 
 Each node has an identifying index, which is its order of appearance (the first
 one is 0, the second one is 1, etc.). A node may have a parent, given by index
