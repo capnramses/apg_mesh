@@ -126,7 +126,9 @@ I give -1 as the bone index:
     parent 2 bone_id 1
     parent 0 bone_id -1
 
-![diagram of skeleton](https://github.com/capnramses/apg_mesh/blob/master/diagram.png)
+![diagram of skeleton](diagram.png)
+
+https://github.com/capnramses/apg_mesh/blob/master/diagram.png
 
 Each node has an identifying index, which is its order of appearance (the first
 one is 0, the second one is 1, etc.). A node may have a parent, given by index
