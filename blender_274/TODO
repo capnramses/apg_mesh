@@ -1,3 +1,5 @@
+* actually get length of each vector found boundrad, not just biggest component
+(this is a bounding box extent, not a radius)
 * normals
 * UVs
 * tangents
