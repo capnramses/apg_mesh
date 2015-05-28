@@ -32,6 +32,14 @@ def faceToTriangles(face):
 
 	return triangles
 
+def max_in_face (face):
+	rv = 0.0
+	for v in face:
+		for c in v:
+			if (abs (c) > rv):
+				rv = c
+	return rv
+
 def faceValues(face, mesh, matrix):
 	fv = []
 	for verti in face.vertices:
@@ -44,6 +52,7 @@ def faceToLine(face):
 def apg_write (context, filepath):
 	scene = context.scene
 
+	brad = 0.0
 	faces = []
 	for obj in context.selected_objects:
 		if obj.type != 'MESH':
@@ -73,10 +82,14 @@ def apg_write (context, filepath):
 	vc = 3 * len(faces)
 	file.write ("@vert_count %i\n@vp_comps 3\n" % vc)
 	for face in faces:
+		fm = max_in_face (face)
+		if (fm > brad):
+			brad = fm
 		file.write(faceToLine(face))
 	file.write ("@vn_comps 3\n")
 	file.write ("@vt_comps 2\n")
 	file.write ("@vtan_comps 4\n")
+	file.write ("@bounding radius %.2f\n" % brad)
 	file.close()
 
 # ExportHlper is a hlper class, defines fname and invoke() which calls file

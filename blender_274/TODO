@@ -1,0 +1,6 @@
+* normals
+* UVs
+* tangents
+* skeleton
+* animations
+* export meshes from all objects, not just a single, selected object
