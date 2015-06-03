@@ -290,17 +290,23 @@ bool load_mesh (const char* file_name) {
 			char code_str[32];
 			
 			sscanf (line, "@%s\n", code_str);
-			printf ("code: %s\n", code_str);
+			printf ("code: \"%s\"\n", code_str);
+			
 			if (strcmp (code_str, "Anton's") == 0) {
+			
 			} else if (strcmp (code_str, "vert_count") == 0) {
 				sscanf (line, "@vert_count %i\n", &vert_count);
+				
 			} else if (strcmp (code_str, "vp") == 0) {
 				sscanf (line, "@vp comps %i\n", &vp_comps);
 				vps = (float*)malloc (vert_count * vp_comps * sizeof (float));
+				printf ("vc %i vvcvs;lksjhdflkjsdhfkjd %i\n", vert_count, vp_comps);
 				for (int i = 0; i < vert_count * vp_comps; i++) {
 					fscanf (f, "%f", &vps[i]);
+					printf ("v %f\n", vps[i]);
 				}
 				fscanf (f, "\n");
+				
 			} else if (strcmp (code_str, "vn") == 0) {
 				sscanf (line, "@vn comps %i\n", &vn_comps);
 				vns = (float*)malloc (vert_count * vn_comps * sizeof (float));
@@ -538,6 +544,8 @@ bool load_mesh (const char* file_name) {
 		}
 	}
 	fclose (f);
+	
+	printf ("1st 3 vps: %f %f %f\n", vps[0], vps[1], vps[2]);
 	
 	glGenBuffers (1, &points_vbo);
 	glBindBuffer (GL_ARRAY_BUFFER, points_vbo);
@@ -852,7 +860,6 @@ int main (int argc, char** argv) {
 	glEnableVertexAttribArray (0);
 	glBindBuffer (GL_ARRAY_BUFFER, bpoints_vbo);
 	glVertexAttribPointer (0, 1, GL_FLOAT, GL_FALSE, 0, NULL);
-	
 	V = look_at (
 		vec3 (0.0f, 10.0f, 10.0f),
 		vec3 (0.0f, 0.0f, 0.0),
@@ -865,7 +872,6 @@ int main (int argc, char** argv) {
 	if (animation_count > 0) {
 		dur = animations[0].duration;
 	}
-	
 	glClearColor (0.2, 0.2, 0.2, 1.0);
 	glDepthFunc (GL_LESS);
 	previous_seconds = glfwGetTime ();
@@ -879,7 +885,6 @@ int main (int argc, char** argv) {
 		if (anim_timer > dur) {
 			anim_timer = 0.0;
 		}
-		
 		glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glEnable (GL_DEPTH_TEST);
 		if (animation_count > 0) {
@@ -903,7 +908,6 @@ int main (int argc, char** argv) {
 				current_bone_mats[0].m);
 			glBindVertexArray (vao);
 			glDrawArrays (GL_TRIANGLES, 0, vert_count);
-		
 			glDisable (GL_DEPTH_TEST);
 			glEnable (GL_PROGRAM_POINT_SIZE);
 			glUseProgram (psp);
@@ -927,7 +931,6 @@ int main (int argc, char** argv) {
 			glBindVertexArray (vao);
 			glDrawArrays (GL_TRIANGLES, 0, vert_count);
 		}
-		
 		cam_dirty = false;
 		glfwPollEvents ();
 		glfwSwapBuffers (window);

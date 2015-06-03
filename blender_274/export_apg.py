@@ -199,6 +199,10 @@ def apg_write (filepath,
     # TODO sca_keys
     
     file.write ("@bounding_radius %.2f\n" % b_rad)
+    
+    # write the skeleton hierarchy
+    
+    
     file.close()
     return {'FINISHED'}
 

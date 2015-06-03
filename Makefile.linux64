@@ -1,4 +1,4 @@
-FLAGS = -Ofast -Wall -Wfatal-errors -pedantic -Wextra -fmessage-length=0 -m64
+FLAGS = -g -m64
 LIB_PATH = lib/linux_x86_64/
 DLIBS = -lGL -lX11 -lXxf86vm -lXrandr -lpthread -lXi -lz
 
