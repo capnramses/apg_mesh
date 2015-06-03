@@ -5,11 +5,10 @@
 
 #
 # TODO
-# bone id(s)
+# @vb comps
 # bone weight(s)
-# tangents
-# skeleton heirarchy
-# animations
+# @root_transform comps 16
+#@offset_mat comps 16
 #
 
 #http://wiki.blender.org/index.php/Dev:2.5/Py/Scripts/Guidelines/Addons
@@ -60,6 +59,8 @@ def exp_apg (filepath):
     mdata = None # mesh.data
     faces = None
     armature = None
+    anim_count = len (bpy.data.actions)
+    bones = None
     brad = 0.0 # bounding radius
 
     # find the first mesh in the scene
@@ -76,6 +77,7 @@ def exp_apg (filepath):
         if obj.type == "ARMATURE":
             print ("found armature object \"%s\"" % obj.name)
             armature = obj
+            bones = armature.data.bones
             break
     else:
         print ("WARNING: did not find armature object in scene")
@@ -106,20 +108,8 @@ def exp_apg (filepath):
     #  .co (x,y,z)
     #  .index integer -- seem to be pre-sorted by index anyway
     #  .normal (x,y,z)
-
     iverts = mesh.data.vertices
-    #ivps = [] # indexed vertex points
-    #ivns = [] # indexed normals
     ivtans = [] # indexed tangents
-
-    # get ivps and ivns
-    #for v in iverts:
-        # vector type to list type
-        #ivp = list (v.co)
-        #ivps.append (ivp)
-        #ivn = list (v.normal)
-        #ivns.append (ivn)
-    #print ("%i unique vps" % len (ivps))
 
     # get ivtans
     for loop in mdata.loops:
@@ -200,6 +190,70 @@ def exp_apg (filepath):
     for i, vtan in enumerate (vtans):
         # it's okay printing a tuple like this but not a list. ffs
         file.write ("%.3f %.3f %.3f %.1f\n" % tuple(vtan))
+
+    # previous keyframe vals for bones to reduce repeated keyframes
+   #prev_tra = []
+   # prev_rot = []
+   # prev_sca = []
+
+    # TODO this should be <= blender bones count
+    file.write ("@skeleton bones %i animations %i\n" % (len (bones),
+        anim_count))
+    file.write ("@hierarchy nodes %i\n" % len (bones))
+    for i, b in enumerate (bones):
+        p_i = -1
+        if b.parent:
+            p_i = list (bones).index (b.parent)
+            # TODO match this to reduced list as above
+        file.write ("parent %i bone_id %i\n" % (p_i, i))
+        #prev_tra.push (None)
+        #prev_rot.push (None)
+       # prev_sca.push (None)
+    
+    for i, a in enumerate (bpy.data.actions):
+        # TODO I can't find where to get the animations time or fps!
+        fps = 24.0
+        frange = list (a.frame_range)
+        dur = (frange[1] - frange[0]) / fps
+        file.write ("@animation name %s duration %.3f\n" % (a.name, dur))
+        # process keyframes -- note I think this is just gonna work with 1 anim
+        pbones = armature.pose.bones
+        fr = frange[1] - frange[0]
+        
+        #list(pb.head)
+        #list(pb.location)
+        #list(pb.rotation_quaternion)
+        #list(pb.scale)
+        
+        # translation keys
+        for i, pb in enumerate (pbones):
+            file.write ("@tra_keys node %i count %i comps 3\n" % (i, fr))
+            for j in range (int (frange[0]), int (frange[1]) + 1):
+                scene.frame_set (j)
+                t = (float (j) - frange[0]) / fr) * dur
+                l = list (pb.location)
+                file.write ("t %.3f TRA %.2f %.2f %.2f\n" % (t, l[0], l[1],
+                    l[2]))
+        
+        # rotation keys
+        for i, pb in enumerate (pbones):
+            file.write ("@rot_keys node %i count %i comps 3\n" % (i, fr))
+            for j in range (int (frange[0]), int (frange[1]) + 1):
+                scene.frame_set (j)
+                t = (float (j) - frange[0]) / fr) * dur
+                r = list (pb.rotation_quaternion)
+                file.write ("t %.3f ROT %.3f %.3f %.3f %.3f\n" % (t, r[0],
+                    r[1], r[2], r[3]))
+        
+        # scale keys
+        for i, pb in enumerate (pbones):
+            file.write ("@sca_keys node %i count %i comps 3\n" % (i, fr))
+            for j in range (int (frange[0]), int (frange[1]) + 1):
+                scene.frame_set (j)
+                t = (float (j) - frange[0]) / fr) * dur
+                s = list (pb.scale)
+                file.write ("t %.3f SCA %.2f %.2f %.2f\n" % (t, s[0], s[1],
+                    s[2]))
 
     file.write ("@bounding_radius %.2f\n" % brad)
 
