@@ -1,20 +1,29 @@
 #
-# APG mesh format exporter (.apg)
+# APG mesh format exporter (.apg) for Blender 2.74
 # 1st v 28 may 2015 anton gerdelan
 # 2nd v is a modified v of the Blender ply exporter 29 May 2015
 #
 
+#
+# TODO
+# bone id(s)
+# bone weight(s)
+# tangents
+# skeleton heirarchy
+# animations
+#
+
+#http://wiki.blender.org/index.php/Dev:2.5/Py/Scripts/Guidelines/Addons
 bl_info = {
-    "name": "APG mesh format (.apg)",
+    "name": "APG mesh exporter (.apg)",
+    "description": "Exports APG Format",
     "author": "Anton Gerdelan",
-    "version": (0, 1),
+    "version": (0, 2),
     "blender": (2, 74, 0),
     "location": "File > Import-Export > APG (.apg) ",
-    "description": "Import-Export APG Format",
-    "warning": "",
-    "wiki_url": ""
-                "",
-    "category": "Import-Export",
+    "warning": "", # used for warning icon and text in addons panel
+    "wiki_url": "",
+    "category": "Import-Export"
 }
 
 import bpy
@@ -28,22 +37,23 @@ def apg_write (filepath,
               mesh,
               use_normals=True,
               use_uv_coords=True,
-              use_colors=False,
-              ):
+              use_tangents=True,
+              use_colors=False):
 
     # write the faces to a file
-    file = open(filepath, "w")
+    file = open (filepath, "w")
 
     # Be sure tessface & co are available!
     if not mesh.tessfaces and mesh.polygons:
         mesh.calc_tessface()
 
-    has_uv = bool(mesh.tessface_uv_textures)
+    has_uv = bool (mesh.tessface_uv_textures)
     # this is for vertex colours
-    has_vcol = bool(mesh.tessface_vertex_colors)
+    has_vcol = bool (mesh.tessface_vertex_colors)
 
     if not has_uv:
         use_uv_coords = False
+        use_tangents = False
     if not has_vcol:
         use_colors = False
 
@@ -61,6 +71,9 @@ def apg_write (filepath,
         else:
             active_uv_layer = active_uv_layer.data
 
+    if use_tangents:
+        mesh.calc_tangents ()
+
     if has_vcol:
         active_col_layer = mesh.tessface_vertex_colors.active
         if not active_col_layer:
@@ -70,64 +83,65 @@ def apg_write (filepath,
             active_col_layer = active_col_layer.data
 
     # in case
-    color = uvcoord = uvcoord_key = normal = normal_key = None
+    color = uvcoord = uvcoord_key = normal = normal_key = tangent = None
 
     mesh_verts = mesh.vertices  # save a lookup
     ply_verts = []  # list of dictionaries
     # vdict = {} # (index, normal, uv) -> new index
-    vdict = [{} for i in range(len(mesh_verts))]
-    ply_faces = [[] for f in range(len(mesh.tessfaces))]
+    vdict = [{} for i in range (len (mesh_verts))]
+    ply_faces = [[] for f in range (len (mesh.tessfaces))]
     vert_count = 0
     # loop through all the faces, getting index and face instance of each
     # vertices are looped through within each face
-    for i, f in enumerate(mesh.tessfaces):
+    for i, f in enumerate (mesh.tessfaces):
+        # equiv to normals enabled && use smooth (weird way to write this from the ply exporter)
         smooth = not use_normals or f.use_smooth
         if not smooth:
             normal = f.normal[:]
             normal_key = normal # ANTON -- removed rounded vec3 here
-
         if has_uv:
+            # only draws values from one UV layer
             uv = active_uv_layer[i]
             uv = uv.uv1, uv.uv2, uv.uv3, uv.uv4
         if has_vcol:
             col = active_col_layer[i]
             col = col.color1[:], col.color2[:], col.color3[:], col.color4[:]
-
+        # this is a list of indices of actual vertices from mesh.vertices to use (like an obj)
+        # NOTE: could use indexed per-vertex data here
         f_verts = f.vertices
-
         pf = ply_faces[i]
-        
-        # loop through vertices of each faace
-        for j, vidx in enumerate(f_verts):
+        # loop through vertices of each face
+        for j, vidx in enumerate (f_verts):
             v = mesh_verts[vidx]
-
             if smooth:
                 normal = v.normal[:]
                 normal_key = normal # ANTON removed rounding
-
             if has_uv:
                 uvcoord = uv[j][0], uv[j][1]
                 uvcoord_key = uvcoord #rvec2d(uvcoord)
-
             if has_vcol:
                 color = col[j]
                 #color = (int(color[0]),
                 #         int(color[1]),
                 #         int(color[2]),
                 #         )
+            if use_tangents:
+                tangent = v.tangent[:]
+                
             key = normal_key, uvcoord_key, color
 
             vdict_local = vdict[vidx]
-            pf_vidx = vdict_local.get(key)  # Will be None initially
+            pf_vidx = vdict_local.get (key)  # Will be None initially
 
             if pf_vidx is None:  # same as vdict_local.has_key(key)
                 pf_vidx = vdict_local[key] = vert_count
-                ply_verts.append((vidx, normal, uvcoord, color))
+                ply_verts.append ((vidx, normal, uvcoord, tangent, color))
                 vert_count += 1
 
             pf.append(pf_vidx)
 
-    file.write ("@Anton's mesh format v.27DEC2014. Blender %s export. https://github.com/capnramses/apg_mesh/\n" % bpy.app.version_string)
+    file.write ("@Anton's mesh format v.27DEC2014. Blender %s export. "
+                "https://github.com/capnramses/apg_mesh/\n" % bpy.app.version_string)
 
     # per-vertex data
     file.write ("@vert_count %i\n" % len(ply_verts))
@@ -136,6 +150,7 @@ def apg_write (filepath,
     # record bounding radius, assuming origin is centre
     b_rad = 0.0
     for i, v in enumerate(ply_verts):
+        # note: why not just create a new array of verts? - this list index is a bit mental-looking
         file.write ("%.2f %.2f %.2f\n" % mesh_verts[v[0]].co[:])  # co
         x = mesh_verts[v[0]].co[0]
         y = mesh_verts[v[0]].co[1]
@@ -146,19 +161,25 @@ def apg_write (filepath,
     # vertex normals
     if use_normals:
         file.write ("@vn_comps 3\n")
-        for i, v in enumerate(ply_verts):
+        for i, v in enumerate (ply_verts):
             # g is for sfigs rather than dplaces
             file.write ("%.3f %.3f %.3f\n" % v[1])
+    # texture coords
     if use_uv_coords:
         file.write ("@vt_comps 2\n")
-        for i, v in enumerate(ply_verts):
+        for i, v in enumerate (ply_verts):
             file.write ("%.3f %.3f\n" % v[2])  # uv
+    # vertex tangents
+    if use_tangents:
+        file.write ("@vtan_comps 4\n")
+        for i, v in enumerate (ply_verts):
+            # g is for sfigs rather than dplaces
+            file.write ("%.3f %.3f %.3f %.3f\n" % v[3])
+    # colours (not supported by spec yet)
     if use_colors:
         file.write ("@vc_comps 3\n")
-        for i, v in enumerate(ply_verts):
-            file.write ("%.3f %.3f %.3f\n" % v[3])  # col
-    
-    # TODO - tangents
+        for i, v in enumerate (ply_verts):
+            file.write ("%.3f %.3f %.3f\n" % v[4])  # col
     
     # per-mesh data
     # TODO skeleton
@@ -172,46 +193,41 @@ def apg_write (filepath,
     file.close()
     return {'FINISHED'}
 
-def save(operator,
-         context,
-         filepath="",
-         use_mesh_modifiers=True,
-         use_normals=True,
-         use_uv_coords=True,
-         use_colors=True,
-         global_matrix=None
-         ):
+def save (operator,
+          context,
+          filepath="",
+          use_mesh_modifiers=True,
+          use_normals=True,
+          use_uv_coords=True,
+          use_colors=True,
+          global_matrix=None):
 
     scene = context.scene
     obj = context.active_object
 
     if global_matrix is None:
         from mathutils import Matrix
-        global_matrix = Matrix()
+        global_matrix = Matrix ()
 
-    if bpy.ops.object.mode_set.poll():
-        bpy.ops.object.mode_set(mode='OBJECT')
+    if bpy.ops.object.mode_set.poll ():
+        bpy.ops.object.mode_set (mode = 'OBJECT')
 
     if use_mesh_modifiers and obj.modifiers:
-        mesh = obj.to_mesh(scene, True, 'PREVIEW')
+        mesh = obj.to_mesh (scene, True, 'PREVIEW')
     else:
-        mesh = obj.data.copy()
+        mesh = obj.data.copy ()
 
     if not mesh:
-        raise Exception("Error, could not get mesh data from active object")
+        raise Exception ("Error, could not get mesh data from active object")
 
-    mesh.transform(global_matrix * obj.matrix_world)
+    mesh.transform (global_matrix * obj.matrix_world)
     if use_normals:
-        mesh.calc_normals()
+        mesh.calc_normals ()
 
-    ret = apg_write(filepath, mesh,
-                    use_normals=use_normals,
-                    use_uv_coords=use_uv_coords,
-                    use_colors=use_colors,
-                    )
+    ret = apg_write (filepath, mesh, use_normals=use_normals, use_uv_coords = use_uv_coords, use_colors = use_colors)
 
     if use_mesh_modifiers:
-        bpy.data.meshes.remove(mesh)
+        bpy.data.meshes.remove (mesh)
 
     return ret
 
@@ -232,12 +248,12 @@ class APGExporter(Operator, ExportHelper):
     global_scale = 1.0
 
     filename_ext = ".apg"
-    filter_glob = StringProperty(
+    filter_glob = StringProperty (
         default="*.apg",
         options={'HIDDEN'}
         )
 
-    def execute(self, context):
+    def execute (self, context):
 
         from mathutils import Matrix
         keywords = self.as_keywords(ignore=("axis_forward",
@@ -254,7 +270,7 @@ class APGExporter(Operator, ExportHelper):
         filepath = self.filepath
         filepath = bpy.path.ensure_ext(filepath, self.filename_ext)
 
-        return save(self, context, **keywords)
+        return save (self, context, **keywords)
 
 def menu_export(self, context):
     self.layout.operator(APGExporter.bl_idname, text="APG Mesh (.apg)")
