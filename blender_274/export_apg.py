@@ -2,6 +2,7 @@
 # APG mesh format exporter (.apg) for Blender 2.74
 # 1st v 28 may 2015 anton gerdelan
 # 2nd v is a modified v of the Blender ply exporter 29 May 2015
+# 3rd v 3 jun 2015 - tangents exporting.
 #
 
 #
@@ -86,6 +87,13 @@ def apg_write (filepath,
     color = uvcoord = uvcoord_key = normal = normal_key = tangent = None
 
     mesh_verts = mesh.vertices  # save a lookup
+    mesh_tans = []
+    # TODO -- not if not using tangents
+    for loop in mesh.loops:
+        # convert this sneaky belligerent tuple into a list!!!
+        tan = list (loop.tangent[0:3])
+        tan.append (loop.bitangent_sign)
+        mesh_tans.append (tan) 
     ply_verts = []  # list of dictionaries
     # vdict = {} # (index, normal, uv) -> new index
     vdict = [{} for i in range (len (mesh_verts))]
@@ -126,8 +134,8 @@ def apg_write (filepath,
                 #         int(color[2]),
                 #         )
             if use_tangents:
-                tangent = v.tangent[:]
-                
+                tangent = mesh_tans[vidx]
+
             key = normal_key, uvcoord_key, color
 
             vdict_local = vdict[vidx]
@@ -174,7 +182,8 @@ def apg_write (filepath,
         file.write ("@vtan_comps 4\n")
         for i, v in enumerate (ply_verts):
             # g is for sfigs rather than dplaces
-            file.write ("%.3f %.3f %.3f %.3f\n" % v[3])
+            #print (v[3])
+            file.write ("%.3f %.3f %.3f %.1f\n" % (v[3][0], v[3][1], v[3][2], v[3][3]))
     # colours (not supported by spec yet)
     if use_colors:
         file.write ("@vc_comps 3\n")
