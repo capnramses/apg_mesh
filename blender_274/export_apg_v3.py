@@ -122,6 +122,7 @@ def exp_apg (filepath):
     vts = []
     vns = []
     vtans = []
+    vboneids = []
     # loop over faces (seems to always be quads)
     for i, f in enumerate (mdata.tessfaces):
         vp = vt = vn = vtan = None
@@ -142,7 +143,12 @@ def exp_apg (filepath):
         tri_uv.append (quad_uv[2])
         # loop over verts in face
         q_indices = f.vertices
-        t_indices = triangulate (q_indices);
+        # FIXME -- is this a giant screw-up? they should always be quads?
+        if len (q_indices) < 4:
+            print ("q_indices length was %i" % len (q_indices))
+            t_indices = q_indices
+        else:
+            t_indices = triangulate (q_indices);
         for j, v_i in enumerate (t_indices):
             v = iverts[v_i]
             vp = v.co[:]
@@ -150,12 +156,15 @@ def exp_apg (filepath):
                 vn = v.normal[:]
             vt = tri_uv[j][0], tri_uv[j][1]
             vtan = ivtans[v_i]
-            
+            if (len (v.groups) > 0):
+                g = list (v.groups)[0]
+                # TODO g has .group and .weight
             # append values to main lists
             vps.append (vp)
             vts.append (vt)
             vns.append (vn)
             vtans.append (vtan)
+            vboneids.append (g.group)
             
     # get the bounding box
     print ("calculating bounding radius")
@@ -178,7 +187,7 @@ def exp_apg (filepath):
     # vertex normals
     file.write ("@vn comps 3\n")
     for i, vn in enumerate (vns):
-        file.write ("%.3f %.3f %.3f\n" % vn)
+        file.write ("%.3g %.3g %.3g\n" % vn)
         
     # texture coords
     file.write ("@vt comps 2\n")
@@ -189,7 +198,14 @@ def exp_apg (filepath):
     file.write ("@vtan comps 4\n")
     for i, vtan in enumerate (vtans):
         # it's okay printing a tuple like this but not a list. ffs
-        file.write ("%.3f %.3f %.3f %.1f\n" % tuple(vtan))
+        file.write ("%.3g %.3g %.3g %.1g\n" % tuple(vtan))
+    
+    # bone IDs
+    # FIXME allow >1 bone IDs with weights
+    # FIXME check if number here corresponds to what goes into skeleton
+    file.write ("@vb comps 1\n")
+    for i, bone_id in enumerate (vboneids):
+        file.write ("%i\n" % bone_id)
 
     # previous keyframe vals for bones to reduce repeated keyframes
    #prev_tra = []
@@ -215,7 +231,7 @@ def exp_apg (filepath):
         fps = 24.0
         frange = list (a.frame_range)
         dur = (frange[1] - frange[0]) / fps
-        file.write ("@animation name %s duration %.3f\n" % (a.name, dur))
+        file.write ("@animation name %s duration %.4f\n" % (a.name, dur))
         # process keyframes -- note I think this is just gonna work with 1 anim
         pbones = armature.pose.bones
         fr = frange[1] - frange[0]
@@ -230,9 +246,9 @@ def exp_apg (filepath):
             file.write ("@tra_keys node %i count %i comps 3\n" % (i, fr))
             for j in range (int (frange[0]), int (frange[1]) + 1):
                 scene.frame_set (j)
-                t = (float (j) - frange[0]) / fr) * dur
+                t = ((float (j) - frange[0]) / fr) * dur
                 l = list (pb.location)
-                file.write ("t %.3f TRA %.2f %.2f %.2f\n" % (t, l[0], l[1],
+                file.write ("t %.4f TRA %.2f %.2f %.2f\n" % (t, l[0], l[1],
                     l[2]))
         
         # rotation keys
@@ -240,9 +256,9 @@ def exp_apg (filepath):
             file.write ("@rot_keys node %i count %i comps 3\n" % (i, fr))
             for j in range (int (frange[0]), int (frange[1]) + 1):
                 scene.frame_set (j)
-                t = (float (j) - frange[0]) / fr) * dur
+                t = ((float (j) - frange[0]) / fr) * dur
                 r = list (pb.rotation_quaternion)
-                file.write ("t %.3f ROT %.3f %.3f %.3f %.3f\n" % (t, r[0],
+                file.write ("t %.4f ROT %.3f %.3f %.3f %.3f\n" % (t, r[0],
                     r[1], r[2], r[3]))
         
         # scale keys
@@ -250,9 +266,9 @@ def exp_apg (filepath):
             file.write ("@sca_keys node %i count %i comps 3\n" % (i, fr))
             for j in range (int (frange[0]), int (frange[1]) + 1):
                 scene.frame_set (j)
-                t = (float (j) - frange[0]) / fr) * dur
+                t = ((float (j) - frange[0]) / fr) * dur
                 s = list (pb.scale)
-                file.write ("t %.3f SCA %.2f %.2f %.2f\n" % (t, s[0], s[1],
+                file.write ("t %.4f SCA %.2f %.2f %.2f\n" % (t, s[0], s[1],
                     s[2]))
 
     file.write ("@bounding_radius %.2f\n" % brad)
