@@ -5,10 +5,12 @@
 
 #
 # TODO
-# @vb comps
-# bone weight(s)
+# swap Y and Z -= around in VPs (and VNs?) (and VTANS?)
 # @root_transform comps 16
-#@offset_mat comps 16
+# @offset_mat comps 16 (one line follows PER BONE)
+# animation name in quotes?
+# ** empty tra keys seem to have inverse of bone offset mat in them. grrr
+# bound rad is slightly different (is probably better than older one)
 #
 
 #http://wiki.blender.org/index.php/Dev:2.5/Py/Scripts/Guidelines/Addons
