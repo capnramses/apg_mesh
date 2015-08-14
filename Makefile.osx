@@ -1,0 +1,30 @@
+FLAGS = -DAPPLE -Wall -pedantic -mmacosx-version-min=10.5 -arch x86_64 -fmessage-length=0 -UGLFW_CDECL -fprofile-arcs -ftest-coverage
+LIB_PATH = lib/osx/
+FRAMEWORKS = -framework Cocoa -framework OpenGL -framework IOKit
+
+INCLUDES = $(wildcard include/*.h)
+
+SLIBS = $(LIB_PATH)libGLEW.a $(LIB_PATH)libglfw3.a $(LIB_PATH)libassimp.a
+
+.PHONY : all
+all: converter viewer
+clean:
+	rm *.o; rm view_osx; rm conv_osx
+converter : obj/converter.o obj/mesh_loader.o $(INCLUDES)
+	g++ ${FLAGS} ${FRAMEWORKS} -o conv_osx obj/converter.o obj/mesh_loader.o -I \
+	include/ $(SLIBS) -lz
+viewer : obj/viewer.o $(INCLUDES)
+	g++ ${FLAGS} ${FRAMEWORKS} -o view_osx obj/viewer.o -I include/ $(SLIBS)
+	
+#--------------------rule for making objects from cpp files-------------------#
+obj/%.o: src/%.cpp  $(INCLUDES)
+	@echo ''
+	@echo '~~~~~~~~~~~~~~~~ building file $< ~~~~~~~~~~~~~~~~~~~~'
+	@echo ''
+	g++ -I include/ ${FLAGS} -c ${DEPS} -o"$@" "$<"
+
+obj/%.o: src/%.c  $(INCLUDES)
+	@echo ''
+	@echo '~~~~~~~~~~~~~~~~ building file $< ~~~~~~~~~~~~~~~~~~~~'
+	@echo ''
+	g++ -I include/ ${FLAGS} -c ${DEPS} -o"$@" "$<"

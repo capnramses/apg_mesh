@@ -620,6 +620,17 @@ bool start_gl () {
 		fprintf (stderr, "ERROR: could not start GLFW3\n");
 		return false;
 	}
+	
+	/* We must specify 3.2 core if on Apple OS X -- other O/S can specify
+	 anything here. I defined 'APPLE' in the makefile for OS X */
+#ifdef APPLE
+	glfwWindowHint (GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint (GLFW_CONTEXT_VERSION_MINOR, 2);
+	glfwWindowHint (GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+	glfwWindowHint (GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#endif
+	
+	
 	glfwWindowHint (GLFW_SAMPLES, 16);
 	window = glfwCreateWindow (width, height, "Custom Skinned Mesh Format", NULL,
 		NULL);
@@ -647,6 +658,53 @@ void print_shader_info_log (unsigned int shader_index) {
 }
 
 bool create_shaders () {
+#ifdef APPLE
+	const char* vertex_shader =
+	"#version 150\n"
+	"in vec3 vp, vn;"
+	"in vec2 vt;"
+	"in float bone_id;"
+	"uniform mat4 P, V, B[32];"
+	"uniform mat4 bone_mats[16];"
+	"out vec3 n_eye, p_eye, l_pos_eye;"
+	"out vec2 st;"
+	//"flat out float bone_id_f;"
+	"out float bone_id_f;"
+	"void main () {"
+	"  bone_id_f = bone_id;"
+	"  p_eye = (V * vec4 (vp, 1.0)).xyz;"
+	"  n_eye = (V * vec4 (vn, 0.0)).xyz;"
+	"  l_pos_eye = (V * vec4 (2.0, 2.0, 15.0, 1.0)).xyz;"
+	"  st = vt;"
+	"  gl_Position = P * V * B[int (bone_id)] * vec4 (vp, 1.0);"
+	"}";
+	// * bone_mats[int (bone_id)] *
+	
+	const char* fragment_shader =
+	"#version 150\n"
+	"in vec3 n_eye, p_eye, l_pos_eye;"
+	"in vec2 st;"
+	"in float bone_id_f;"
+	"out vec4 frag_colour;"
+	"void main () {"
+	"  frag_colour = vec4 (1.0, 1.0, 1.0, 1.0);"
+	"  if (bone_id_f < 0.1) {"
+	"    frag_colour = vec4 (1.0, 0.0, 0.0, 1.0);"
+	"  } else if (bone_id_f < 1.1) {"
+	"    frag_colour = vec4 (0.0, 1.0, 0.0, 1.0);"
+	"  } else if (bone_id_f < 2.1) {"
+	"    frag_colour = vec4 (0.0, 0.0, 1.0, 1.0);"
+	"  } else if (bone_id_f < 3.1) {"
+	"    frag_colour = vec4 (1.0, 1.0, 0.0, 1.0);"
+	"  } else if (bone_id_f < 4.1) {"
+	"    frag_colour = vec4 (1.0, 0.0, 1.0, 1.0);"
+	"  } else if (bone_id_f < 5.1) {"
+	"    frag_colour = vec4 (0.0, 1.0, 1.0, 1.0);"
+	"  } else if (bone_id_f < 6.1) {"
+	"    frag_colour = vec4 (0.0, 0.5, 1.0, 1.0);"
+	"  }"
+	"}";
+#else
 	const char* vertex_shader =
 	"#version 120\n"
 	"attribute vec3 vp, vn;"
@@ -691,6 +749,7 @@ bool create_shaders () {
 	"    gl_FragColor = vec4 (0.0, 0.5, 1.0, 1.0);"
 	"  }"
 	"}";
+#endif
 
 	GLuint vs = glCreateShader (GL_VERTEX_SHADER);
 	glShaderSource (vs, 1, &vertex_shader, NULL);
@@ -727,7 +786,33 @@ bool create_shaders () {
 		B_locs[i] = glGetUniformLocation (shader_programme, name);
 		glUniformMatrix4fv (B_locs[i], 1, GL_FALSE, identity_mat4 ().m);
 	}
+
+#ifdef APPLE
+	const char* no_skin_vertex_shader =
+	"#version 150\n"
+	"in vec3 vp, vn;"
+	"in vec2 vt;"
+	"uniform mat4 P, V;"
+	"out vec3 n_eye, p_eye, l_pos_eye;"
+	"out vec2 st;"
+	"void main () {"
+	"  p_eye = (V * vec4 (vp, 1.0)).xyz;"
+	"  n_eye = (V * vec4 (vn, 0.0)).xyz;"
+	"  l_pos_eye = (V * vec4 (2.0, 2.0, 15.0, 1.0)).xyz;"
+	"  st = vt;"
+	"  gl_Position = P * V * vec4 (vp, 1.0);"
+	"}";
+	// * bone_mats[int (bone_id)] *
 	
+	const char* no_skin_fragment_shader =
+	"#version 150\n"
+	"in vec3 n_eye, p_eye, l_pos_eye;"
+	"in vec2 st;"
+	"out vec4 frag_colour;"
+	"void main () {"
+	"  frag_colour = vec4 (1.0, 1.0, 1.0, 1.0);"
+	"}";
+#else
 	const char* no_skin_vertex_shader =
 	"#version 120\n"
 	"attribute vec3 vp, vn;"
@@ -751,6 +836,7 @@ bool create_shaders () {
 	"void main () {"
 	"  gl_FragColor = vec4 (1.0, 1.0, 1.0, 1.0);"
 	"}";
+#endif
 	
 	vs = glCreateShader (GL_VERTEX_SHADER);
 	glShaderSource (vs, 1, &no_skin_vertex_shader, NULL);

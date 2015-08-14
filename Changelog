@@ -1,3 +1,6 @@
+2015 aug 14 - anton
+* osx build files and 3.2 viewer GL support to keep apple happy
+
 2015 apr 1 - anton
 * mesh_loader.cpp: fixed bug. convert_assimp_matrix() was creating a row-major
 matrix for some reason. transposed 
