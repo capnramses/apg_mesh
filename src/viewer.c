@@ -7,6 +7,8 @@
 // uses the Assimp asset importer library http://assimp.sourceforge.net/
 //
 #include "maths_funcs.hpp"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 //#define GLEW_STATIC
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -301,10 +303,10 @@ bool load_mesh (const char* file_name) {
 			} else if (strcmp (code_str, "vp") == 0) {
 				sscanf (line, "@vp comps %i\n", &vp_comps);
 				vps = (float*)malloc (vert_count * vp_comps * sizeof (float));
-				printf ("vc %i vvcvs;lksjhdflkjsdhfkjd %i\n", vert_count, vp_comps);
+				//printf ("vc %i vvcvs;lksjhdflkjsdhfkjd %i\n", vert_count, vp_comps);
 				for (int i = 0; i < vert_count * vp_comps; i++) {
 					fscanf (f, "%f", &vps[i]);
-					printf ("v %f\n", vps[i]);
+					//printf ("v %f\n", vps[i]);
 				}
 				fscanf (f, "\n");
 				
@@ -809,9 +811,10 @@ bool create_shaders () {
 	"#version 150\n"
 	"in vec3 n_eye, p_eye, l_pos_eye;"
 	"in vec2 st;"
+	"uniform sampler2D mytex;"
 	"out vec4 frag_colour;"
 	"void main () {"
-	"  frag_colour = vec4 (1.0, 1.0, 1.0, 1.0);"
+	"  frag_colour = texture2D (mytex, st);"
 	"}";
 #else
 	const char* no_skin_vertex_shader =
@@ -834,8 +837,9 @@ bool create_shaders () {
 	"#version 120\n"
 	"varying vec3 n_eye, p_eye, l_pos_eye;"
 	"varying vec2 st;"
+	"uniform sampler2D mytex;"
 	"void main () {"
-	"  gl_FragColor = vec4 (1.0, 1.0, 1.0, 1.0);"
+	"  gl_FragColor = texture2D (mytex, st);"
 	"}";
 #endif
 	
@@ -916,6 +920,94 @@ bool create_shaders () {
 	return true;
 }
 
+GLuint load_texture (const char* file_name) {
+	// image->mem
+	printf ("loading image %s\n", file_name);
+	int x, y, n;
+	int force_channels = 4;
+	unsigned char* image_data = stbi_load (file_name, &x, &y, &n, force_channels);
+	if (!image_data) {
+		printf ("ERROR: could not load image %s\n", file_name);
+		return 0;
+	}
+	printf ("image loaded: %ix%i %i bytes per pixel\n", x, y, n);
+	{ // FLIP UP-SIDE DIDDELY-DOWN
+		unsigned char *imagePtr = &image_data[0];
+		int halfTheHeightInPixels = y / 2;
+		int heightInPixels = y;
+		// Assuming RGBA for 4 components per pixel.
+		int numColorComponents = 4;
+		// Assuming each color component is an unsigned char.
+		int widthInChars = x * numColorComponents;
+		unsigned char* top = NULL;
+		unsigned char* bottom = NULL;
+		unsigned char temp = 0;
+		for (int h = 0; h < halfTheHeightInPixels; h++) {
+			top = imagePtr + h * widthInChars;
+			bottom = imagePtr + (heightInPixels - h - 1) * widthInChars;
+			for (int w = 0; w < widthInChars; w++) {
+				// Swap the chars around.
+				temp = *top;
+				*top = *bottom;
+				*bottom = temp;
+				++top;
+				++bottom;
+			}
+		}
+	}
+	{ // Copy into an OpenGL texture
+		GLuint tex;
+		glGenTextures (1, &tex);
+		glActiveTexture (GL_TEXTURE0);
+		glBindTexture (GL_TEXTURE_2D, tex);
+		glTexImage2D (GL_TEXTURE_2D, 0, GL_RGBA, x, y, 0, GL_RGBA,
+			GL_UNSIGNED_BYTE, image_data);
+		
+			// shd be in core since 3.0 according to:
+			// http://www.opengl.org/wiki/Common_Mistakes#Automatic_mipmap_generation
+			// next line is to circumvent possible extant ATI bug
+			// but NVIDIA throws a warning glEnable (GL_TEXTURE_2D);
+			/* -- about glgeneratemimmap
+	Up until OpenGL 3.0, this function was not a part of the OpenGL spec. proper.
+	The version that is included in OpenGL 3.0 is actually derived from the
+	GL_ARB_framebuffer_object specification. If your driver lists the
+	GL_ARB_framebuffer_object extension, or you know you have a legitimate
+	OpenGL 3.0+ implementation, you are guaranteed to have this functionality
+	through the proc. address glGenerateMipmap. This is the procedure you shoud
+	use, in such a case. glGenerateMipmapEXT comes from the awful EXT version of
+	the FBO specification. I would avoid it like the plague, unless you have
+	neither OpenGL 3.0 nor GL_ARB_framebuffer_object. You will not have this
+	procedure either, however, if your driver does not report
+	GL_EXT_framebuffer_object.
+			*/
+			if (GLEW_ARB_framebuffer_object) {
+				glGenerateMipmap (GL_TEXTURE_2D);
+				printf ("mipmaps generated %s\n", file_name);
+			}
+			glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+					GL_LINEAR_MIPMAP_LINEAR);
+				glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+					glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		
+		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		 {
+			printf ("setting anisotropy factor %f\n", 16.0);
+			glTexParameterf (GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT,
+				16.0);
+		}
+	}
+	{ 
+		if (!image_data) { // cleanup
+			printf ("ERROR: image data corruption/leak\n");
+		} else {
+			stbi_image_free (image_data);
+		}
+		image_data = NULL;
+	}
+	return true;
+}
+
 int main (int argc, char** argv) {
 	mat4 P, V;
 	double dur = 0.0;
@@ -926,13 +1018,17 @@ int main (int argc, char** argv) {
 	GLuint bpoints_vao = 0;
 	
 	if (argc < 2) {
-		printf ("usage: ./viewer FILE.apg\n");
+		printf ("usage: ./viewer FILE.apg [TEXTURE.png]\n");
 		return 0;
 	}
 	assert (start_gl ());
 	assert (load_mesh (argv[1]));
 	printf ("mesh loaded. %i verts\n", vert_count);
 	assert (create_shaders ());
+	int textureID = 0;
+	if (argc >= 3) {
+		textureID = load_texture (argv[2]);
+	}
 	
 	glGenBuffers (1, &bpoints_vbo);
 	glBindBuffer (GL_ARRAY_BUFFER, bpoints_vbo);
@@ -959,7 +1055,7 @@ int main (int argc, char** argv) {
 	if (animation_count > 0) {
 		dur = animations[0].duration;
 	}
-	glClearColor (0.2, 0.2, 0.2, 1.0);
+	glClearColor (0.0, 0.0, 0.0, 1.0);
 	glDepthFunc (GL_LESS);
 	previous_seconds = glfwGetTime ();
 	while (!glfwWindowShouldClose (window)) {

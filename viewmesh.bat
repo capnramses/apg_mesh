@@ -1,1 +1,1 @@
-view.exe amphora.apg
+view.exe amphora.apg amphora.png
