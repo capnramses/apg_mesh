@@ -1,0 +1,30 @@
+FLAGS = -g -DGLEW_STATIC
+L = lib/mingw/
+DYN_LIBS = -L${L} -lgdi32 -lopengl32
+STA_LIBS = ${L}libglew32.a ${L}libglfw3.a
+DLIBS = -lOpenGL32 -lX11 -lXxf86vm -lXrandr -lpthread -lXi -lz
+
+INCLUDES = $(wildcard include/*.h)
+
+.PHONY : all
+all: converter viewer
+clean:
+	rm *.o; rm view64; rm conv64
+converter : obj/converter.o obj/mesh_loader.o $(INCLUDES)
+	g++ ${FLAGS} -o conv.exe obj/converter.o obj/mesh_loader.o -I include/ \
+	$(STA_LIBS) ${DYN_LIBS}
+viewer : obj/viewer.o $(INCLUDES)
+	g++ ${FLAGS} -o view.exe obj/viewer.o -I include/ $(STA_LIBS) ${DYN_LIBS}
+	
+#--------------------rule for making objects from cpp files-------------------#
+obj/%.o: src/%.cpp  $(INCLUDES)
+	@echo ''
+	@echo '~~~~~~~~~~~~~~~~ building file $< ~~~~~~~~~~~~~~~~~~~~'
+	@echo ''
+	g++ -I include/ ${G} ${FLAGS} -c ${DEPS} -o"$@" "$<"
+
+obj/%.o: src/%.c  $(INCLUDES)
+	@echo ''
+	@echo '~~~~~~~~~~~~~~~~ building file $< ~~~~~~~~~~~~~~~~~~~~'
+	@echo ''
+	g++ -I include/ ${G} ${FLAGS} -c ${DEPS} ${PG} -o"$@" "$<" ${PG}

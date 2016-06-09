@@ -7,6 +7,7 @@
 // uses the Assimp asset importer library http://assimp.sourceforge.net/
 //
 #include "maths_funcs.hpp"
+//#define GLEW_STATIC
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <stdio.h>
