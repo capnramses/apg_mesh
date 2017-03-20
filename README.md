@@ -1,4 +1,4 @@
-#apg_mesh#
+# apg_mesh #
 
 .apg is a simplified ASCII mesh format that supports tangents and skinned
 animations, and can be easily parsed without needing a library. The downside is
@@ -10,7 +10,7 @@ I got tired of the complexity of animated mesh formats, so wrote my own. I'm
 sharing this, not because I think others will use my format, but that it might
 show how easy it is to do yourself a simple way.
 
-##Usage##
+## Usage ##
 
 Converter:
 
@@ -20,7 +20,7 @@ Viewer:
 
   ./view mesh.apg
 
-##Motivation##
+## Motivation ##
 
 * Can easily read with a few lines of C - no libraries required
 * Simplified animation and skeleton structure
@@ -35,7 +35,7 @@ read lines in a loop until you get to an @ symbol, allocate the size of memory
 required, and then run another loop, knowing in advance how many lines and data
 points to read until the end of the block.
 
-##Per-Vertex Data##
+## Per-Vertex Data ##
 
 * points
 * normals
@@ -88,7 +88,7 @@ Example of tangents in "vtan" block:
 
 Tangents can contain a fourth coordinate convention to be used if desired.
 
-##Per-Mesh Data##
+## Per-Mesh Data ##
 
 * single-line header with date of format being used
 * count of vertices (to make it easier to parse in a single pass)
@@ -164,7 +164,7 @@ from the vertex with the biggest straight-line distance from the origin:
 
 This is intended to be used with frustum culling algorithms.
 
-##Dependencies##
+## Dependencies ##
 
 Converter:
 
@@ -175,26 +175,26 @@ OpenGL-based Viewer:
 * GLFW3 http://www.glfw.org/docs/latest/
 * GLEW http://glew.sourceforge.net/
 
-##Future Ideas##
+## Future Ideas ##
 
-###Bone Weights###
+### Bone Weights ###
 
 I haven't tested any meshes with vertices that are weighted to more than one
 bone. It should be fairly trivial to add weights after each bone id, and have
 comps >1 for the bone id block.
 
-###Binary format###
+### Binary format ###
 
 I have a binary option but it actually isn't very beneficial in terms of size.
 I might look at this again later. Limited-precision floats and .obj-like
 optimisation would be key.
 
-###Further reducing or expanding tags###
+### Further reducing or expanding tags ###
 
 Some tags contain redundant information which could be tidied. Animation names
 are not respected because I've had difficulty exporting these myself from
 Blender.
 
-###Blender Export Script###
+## #Blender Export Script ###
 
 I started writing an exporter to .apg from Blender.
