@@ -195,6 +195,6 @@ Some tags contain redundant information which could be tidied. Animation names
 are not respected because I've had difficulty exporting these myself from
 Blender.
 
-## #Blender Export Script ###
+### Blender Export Script ###
 
 I started writing an exporter to .apg from Blender.
